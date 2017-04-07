@@ -1,6 +1,7 @@
 extern crate libc;
 
 use std::io::{self, Read};
+use std::process;
 
 static mut ORIG_TERMIOS: Option<libc::termios> = None;
 
@@ -36,14 +37,18 @@ fn enable_raw_mode() {
     }
 }
 
+fn editor_read_key() -> u8 {
+    let mut c = [0; 1];
+    let _ = io::stdin().read(&mut c);
+    c[0]
+}
+
+fn editor_process_keypress() {
+    let c = editor_read_key();
+    if c == ctrl_key(b'q') { process::exit(0) }
+}
+
 fn main() {
     enable_raw_mode();
-
-    let mut c = [0; 1];
-    loop {
-        c[0] = 0;
-        let _ = io::stdin().read(&mut c);
-        print!("{:?}\r\n", c);
-        if c[0] == ctrl_key(b'q') { break; }
-    }
+    loop { editor_process_keypress() }
 }
