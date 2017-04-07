@@ -17,7 +17,10 @@ fn enable_raw_mode() {
         libc::tcgetattr(libc::STDIN_FILENO, &mut termios as *mut libc::termios);
         ORIG_TERMIOS = Some(termios);
         libc::atexit(disable_raw_mode);
-        termios.c_lflag &= !(libc::ECHO | libc::ICANON);
+        termios.c_iflag &= !(libc::BRKINT | libc::ICRNL | libc::INPCK | libc::ISTRIP | libc::IXON);
+        termios.c_oflag &= !libc::OPOST;
+        termios.c_cflag |= libc::CS8;
+        termios.c_lflag &= !(libc::ECHO | libc::ICANON | libc::IEXTEN | libc::ISIG);
         libc::tcsetattr(libc::STDIN_FILENO, libc::TCSAFLUSH, &mut termios);
     }
 }
@@ -28,7 +31,7 @@ fn main() {
     let mut c = [0; 1];
     loop {
         let _ = io::stdin().read(&mut c);
-        println!("{:?}", c);
+        print!("{:?}\r\n", c);
         if c.contains(&b'q') { break; }
     }
 }
