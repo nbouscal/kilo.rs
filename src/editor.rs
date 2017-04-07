@@ -21,10 +21,12 @@ impl Editor {
     }
 
     pub fn refresh_screen(&mut self) {
+        self.buffer.push_str("\x1b[?25l");
         self.buffer.push_str("\x1b[2J");
         self.buffer.push_str("\x1b[H");
         self.draw_rows();
         self.buffer.push_str("\x1b[H");
+        self.buffer.push_str("\x1b[?25h");
         let _ = io::stdout().write(self.buffer.as_bytes());
         let _ = io::stdout().flush();
         self.buffer.clear();
