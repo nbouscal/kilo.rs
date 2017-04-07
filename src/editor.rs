@@ -6,6 +6,7 @@ use std::process;
 pub struct Editor {
     screen_rows: u16,
     screen_cols: u16,
+    buffer: String,
 }
 
 impl Editor {
@@ -15,22 +16,25 @@ impl Editor {
         Editor {
             screen_rows: rows,
             screen_cols: cols,
+            buffer: String::new(),
         }
     }
 
-    pub fn refresh_screen(&self) {
-        let _ = io::stdout().write(b"\x1b[2J");
-        let _ = io::stdout().write(b"\x1b[H");
+    pub fn refresh_screen(&mut self) {
+        self.buffer.push_str("\x1b[2J");
+        self.buffer.push_str("\x1b[H");
         self.draw_rows();
-        let _ = io::stdout().write(b"\x1b[H");
+        self.buffer.push_str("\x1b[H");
+        let _ = io::stdout().write(self.buffer.as_bytes());
         let _ = io::stdout().flush();
+        self.buffer.clear();
     }
 
-    fn draw_rows(&self) {
+    fn draw_rows(&mut self) {
         for i in 0..self.screen_rows {
-            let _ = io::stdout().write(b"~");
+            self.buffer.push_str("~");
             if i < self.screen_rows - 1 {
-                let _ = io::stdout().write(b"\r\n");
+                self.buffer.push_str("\r\n");
             }
         }
     }
