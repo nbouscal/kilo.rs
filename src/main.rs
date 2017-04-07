@@ -1,6 +1,6 @@
 extern crate libc;
 
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::process;
 
 static mut ORIG_TERMIOS: Option<libc::termios> = None;
@@ -43,12 +43,26 @@ fn editor_read_key() -> u8 {
     c[0]
 }
 
+fn editor_refresh_screen() {
+    let _ = io::stdout().write(b"\x1b[2J");
+    let _ = io::stdout().write(b"\x1b[H");
+    let _ = io::stdout().flush();
+}
+
 fn editor_process_keypress() {
     let c = editor_read_key();
-    if c == ctrl_key(b'q') { process::exit(0) }
+    if c == ctrl_key(b'q') {
+        let _ = io::stdout().write(b"\x1b[2J");
+        let _ = io::stdout().write(b"\x1b[H");
+        let _ = io::stdout().flush();
+        process::exit(0)
+    }
 }
 
 fn main() {
     enable_raw_mode();
-    loop { editor_process_keypress() }
+    loop {
+        editor_refresh_screen();
+        editor_process_keypress();
+    }
 }
