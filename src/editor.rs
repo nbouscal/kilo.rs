@@ -10,6 +10,7 @@ pub struct Editor {
 
 impl Editor {
     pub fn new() -> Self {
+        // TODO: Default to 24x80 if None?
         let (rows, cols) = terminal::get_window_size().unwrap();
         Editor {
             screen_rows: rows,
