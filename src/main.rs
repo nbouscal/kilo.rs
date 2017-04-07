@@ -1,6 +1,6 @@
 extern crate libc;
 
-use std::io::{self, Read};
+use std::io;
 
 fn enable_raw_mode() {
     unsafe {
@@ -15,7 +15,10 @@ fn main() {
     enable_raw_mode();
 
     let mut buffer = String::new();
-    let _ = io::stdin().read_to_string(&mut buffer);
+    loop {
+        let _ = io::stdin().read_line(&mut buffer);
+        if buffer.contains("q") { break; }
+    }
 
     println!("{}", buffer);
 }
