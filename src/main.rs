@@ -21,6 +21,8 @@ fn enable_raw_mode() {
         termios.c_oflag &= !libc::OPOST;
         termios.c_cflag |= libc::CS8;
         termios.c_lflag &= !(libc::ECHO | libc::ICANON | libc::IEXTEN | libc::ISIG);
+        termios.c_cc[libc::VMIN] = 0;
+        termios.c_cc[libc::VTIME] = 1;
         libc::tcsetattr(libc::STDIN_FILENO, libc::TCSAFLUSH, &mut termios);
     }
 }
@@ -30,6 +32,7 @@ fn main() {
 
     let mut c = [0; 1];
     loop {
+        c[0] = 0;
         let _ = io::stdin().read(&mut c);
         print!("{:?}\r\n", c);
         if c.contains(&b'q') { break; }
