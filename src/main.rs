@@ -4,6 +4,8 @@ use std::io::{self, Read};
 
 static mut ORIG_TERMIOS: Option<libc::termios> = None;
 
+fn ctrl_key(key: u8) -> u8 { key & 0x1f }
+
 extern "C" fn disable_raw_mode() {
     unsafe {
         let mut termios = ORIG_TERMIOS.unwrap();
@@ -42,6 +44,6 @@ fn main() {
         c[0] = 0;
         let _ = io::stdin().read(&mut c);
         print!("{:?}\r\n", c);
-        if c.contains(&b'q') { break; }
+        if c[0] == ctrl_key(b'q') { break; }
     }
 }
