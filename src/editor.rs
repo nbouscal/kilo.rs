@@ -27,8 +27,11 @@ impl Editor {
     }
 
     fn draw_rows(&self) {
-        for _ in 0..self.screen_rows {
-            let _ = io::stdout().write(b"~\r\n");
+        for i in 0..self.screen_rows {
+            let _ = io::stdout().write(b"~");
+            if i < self.screen_rows - 1 {
+                let _ = io::stdout().write(b"\r\n");
+            }
         }
     }
 
