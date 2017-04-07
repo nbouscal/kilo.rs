@@ -43,8 +43,16 @@ fn editor_read_key() -> u8 {
     c[0]
 }
 
+fn editor_draw_rows() {
+    for _ in 0..24 {
+        let _ = io::stdout().write(b"~\r\n");
+    }
+}
+
 fn editor_refresh_screen() {
     let _ = io::stdout().write(b"\x1b[2J");
+    let _ = io::stdout().write(b"\x1b[H");
+    editor_draw_rows();
     let _ = io::stdout().write(b"\x1b[H");
     let _ = io::stdout().flush();
 }
