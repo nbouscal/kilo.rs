@@ -1,6 +1,6 @@
 extern crate libc;
 
-use std::io;
+use std::io::{self, Read};
 
 static mut ORIG_TERMIOS: Option<libc::termios> = None;
 
@@ -17,7 +17,7 @@ fn enable_raw_mode() {
         libc::tcgetattr(libc::STDIN_FILENO, &mut termios as *mut libc::termios);
         ORIG_TERMIOS = Some(termios);
         libc::atexit(disable_raw_mode);
-        termios.c_lflag &= !libc::ECHO;
+        termios.c_lflag &= !(libc::ECHO | libc::ICANON);
         libc::tcsetattr(libc::STDIN_FILENO, libc::TCSAFLUSH, &mut termios);
     }
 }
@@ -25,11 +25,10 @@ fn enable_raw_mode() {
 fn main() {
     enable_raw_mode();
 
-    let mut buffer = String::new();
+    let mut c = [0; 1];
     loop {
-        let _ = io::stdin().read_line(&mut buffer);
-        if buffer.contains("q") { break; }
+        let _ = io::stdin().read(&mut c);
+        println!("{:?}", c);
+        if c.contains(&b'q') { break; }
     }
-
-    println!("{}", buffer);
 }
