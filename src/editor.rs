@@ -3,6 +3,8 @@ use terminal;
 use std::io::{self, Read, Write};
 use std::process;
 
+const KILO_VERSION: &'static str = "0.0.1";
+
 pub struct Editor {
     screen_rows: u16,
     screen_cols: u16,
@@ -33,7 +35,15 @@ impl Editor {
 
     fn draw_rows(&mut self) {
         for i in 0..self.screen_rows {
-            self.buffer.push_str("~");
+            if i == self.screen_rows / 3 {
+                let mut welcome = format!("Kilo editor -- version {}", KILO_VERSION);
+                if welcome.len() > self.screen_cols as usize {
+                    welcome.truncate(self.screen_cols as usize)
+                }
+                self.buffer.push_str(&welcome);
+            } else {
+                self.buffer.push_str("~");
+            }
 
             self.buffer.push_str("\x1b[K");
             if i < self.screen_rows - 1 {
