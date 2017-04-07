@@ -22,7 +22,6 @@ impl Editor {
 
     pub fn refresh_screen(&mut self) {
         self.buffer.push_str("\x1b[?25l");
-        self.buffer.push_str("\x1b[2J");
         self.buffer.push_str("\x1b[H");
         self.draw_rows();
         self.buffer.push_str("\x1b[H");
@@ -35,6 +34,8 @@ impl Editor {
     fn draw_rows(&mut self) {
         for i in 0..self.screen_rows {
             self.buffer.push_str("~");
+
+            self.buffer.push_str("\x1b[K");
             if i < self.screen_rows - 1 {
                 self.buffer.push_str("\r\n");
             }
