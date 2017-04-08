@@ -32,16 +32,8 @@ impl Editor {
 
     pub fn open_file(&mut self, filename: &str) {
         let f = File::open(filename).unwrap(); // TODO: Handle error
-        let mut reader = BufReader::new(f);
-        let mut line = String::new();
-        let _ = reader.read_line(&mut line);
-        let has_newline;
-        {
-            let bytes = line.as_bytes();
-            has_newline = bytes[bytes.len() - 1] == b'\n' || bytes[bytes.len() - 1] == b'\r';
-        }
-        if has_newline { line.pop(); }
-        self.rows = vec![line];
+        let reader = BufReader::new(f);
+        self.rows = reader.lines().map(|line| line.unwrap_or(String::new())).collect();
     }
 
     pub fn refresh_screen(&mut self) {
@@ -56,12 +48,22 @@ impl Editor {
         self.write_buffer.clear();
     }
 
+    fn safe_truncate(string: &mut String, i: usize) {
+        if string.len() <= i {
+            return
+        } else if string.is_char_boundary(i) {
+            string.truncate(i)
+        } else {
+            Self::safe_truncate(string, i - 1)
+        }
+    }
+
     fn draw_rows(&mut self) {
         for i in 0..self.screen_rows {
             if i as usize >= self.rows.len() {
                 if self.rows.is_empty() && i == self.screen_rows / 3 {
                     let mut welcome = format!("Kilo editor -- version {}", KILO_VERSION);
-                    welcome.truncate(self.screen_cols as usize);
+                    Self::safe_truncate(&mut welcome, self.screen_cols as usize);
 
                     let padding = (self.screen_cols as usize - welcome.len()) / 2;
                     if padding > 0 {
@@ -75,8 +77,8 @@ impl Editor {
                     self.write_buffer.push_str("~");
                 }
             } else {
-                let ref mut row = self.rows[0];
-                row.truncate(self.screen_cols as usize);
+                let ref mut row = self.rows[i as usize];
+                Self::safe_truncate(row, self.screen_cols as usize);
                 self.write_buffer.push_str(&row);
             }
 
