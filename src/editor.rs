@@ -119,11 +119,11 @@ impl Editor {
         Key::from_bytes(&bytes)
     }
 
-    fn current_row_size(&self) -> u16 {
+    fn current_row_size(&self) -> Option<u16> {
         if self.cursor_y as usize >= self.rows.len() {
-            0
+            None
         } else {
-            self.rows[self.cursor_y as usize].len() as u16
+            Some(self.rows[self.cursor_y as usize].len() as u16)
         }
     }
 
@@ -134,12 +134,20 @@ impl Editor {
                     self.cursor_x -= 1
                 } else if self.cursor_y > 0 {
                     self.cursor_y -= 1;
-                    self.cursor_x = self.current_row_size();
+                    self.cursor_x = self.current_row_size().unwrap();
                 }
             },
             ArrowKey::Right => {
-                if self.cursor_x < self.current_row_size() {
-                    self.cursor_x += 1
+                match self.current_row_size() {
+                    Some(current_row_size) => {
+                        if self.cursor_x < current_row_size {
+                            self.cursor_x += 1
+                        } else if self.cursor_x == current_row_size {
+                            self.cursor_y += 1;
+                            self.cursor_x = 0;
+                        }
+                    },
+                    None => ()
                 }
             },
             ArrowKey::Up    => {
@@ -151,7 +159,7 @@ impl Editor {
                 }
             },
         }
-        let current_row_size = self.current_row_size();
+        let current_row_size = self.current_row_size().unwrap_or(0);
         if (self.cursor_x) > current_row_size {
             self.cursor_x = current_row_size;
         }
