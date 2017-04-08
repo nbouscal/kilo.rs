@@ -119,18 +119,21 @@ impl Editor {
         Key::from_bytes(&bytes)
     }
 
-    fn move_cursor(&mut self, key: ArrowKey) {
-        let current_row_size = if self.cursor_y as usize >= self.rows.len() {
+    fn current_row_size(&self) -> u16 {
+        if self.cursor_y as usize >= self.rows.len() {
             0
         } else {
-            self.rows[self.cursor_y as usize].len()
-        };
+            self.rows[self.cursor_y as usize].len() as u16
+        }
+    }
+
+    fn move_cursor(&mut self, key: ArrowKey) {
         match key {
             ArrowKey::Left  => {
                 if self.cursor_x > 0 { self.cursor_x -= 1 }
             },
             ArrowKey::Right => {
-                if (self.cursor_x as usize) < current_row_size {
+                if self.cursor_x < self.current_row_size() {
                     self.cursor_x += 1
                 }
             },
@@ -142,6 +145,10 @@ impl Editor {
                     self.cursor_y += 1
                 }
             },
+        }
+        let current_row_size = self.current_row_size();
+        if (self.cursor_x) > current_row_size {
+            self.cursor_x = current_row_size;
         }
     }
 
