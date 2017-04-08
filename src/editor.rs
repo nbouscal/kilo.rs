@@ -16,6 +16,8 @@ pub struct Editor {
 enum Key {
     Character(u8),
     Arrow(ArrowKey),
+    Home,
+    End,
     PageUp,
     PageDown,
 }
@@ -91,8 +93,12 @@ impl Editor {
                 if seq[1] >= b'0' && seq[1] <= b'9' {
                     if seq[2] == b'~' {
                         match seq[1] {
+                            b'1' => Key::Home,
+                            b'4' => Key::End,
                             b'5' => Key::PageUp,
                             b'6' => Key::PageDown,
+                            b'7' => Key::Home,
+                            b'8' => Key::End,
                             _    => Key::Character(c[0]),
                         }
                     } else {
@@ -104,8 +110,16 @@ impl Editor {
                         b'B' => Key::Arrow(ArrowKey::Down),
                         b'C' => Key::Arrow(ArrowKey::Right),
                         b'D' => Key::Arrow(ArrowKey::Left),
+                        b'H' => Key::Home,
+                        b'F' => Key::End,
                         _    => Key::Character(c[0]),
                     }
+                }
+            } else if seq[0] == b'O' {
+                match seq[1] {
+                    b'H' => Key::Home,
+                    b'F' => Key::End,
+                    _    => Key::Character(c[0]),
                 }
             } else {
                 Key::Character(c[0])
@@ -144,6 +158,8 @@ impl Editor {
                 }
             },
             Key::Arrow(a) => self.move_cursor(a),
+            Key::Home => self.cursor_x = 0,
+            Key::End => self.cursor_x = self.screen_cols - 1,
             Key::PageUp => {
                 for _ in 0..self.screen_rows {
                     self.move_cursor(ArrowKey::Up)
