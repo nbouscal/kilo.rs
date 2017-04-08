@@ -13,6 +13,14 @@ pub struct Editor {
     buffer: String,
 }
 
+enum Key {
+    Character(u8),
+    ArrowLeft,
+    ArrowRight,
+    ArrowUp,
+    ArrowDown,
+}
+
 impl Editor {
     pub fn new() -> Self {
         // TODO: Default to 24x80 if None?
@@ -67,7 +75,7 @@ impl Editor {
 
     fn ctrl_key(key: u8) -> u8 { key & 0x1f }
 
-    fn read_key() -> u8 {
+    fn read_key() -> Key {
         let mut c = [0; 1];
         let _ = io::stdin().read(&mut c);
         if c[0] == b'\x1b' {
@@ -75,44 +83,42 @@ impl Editor {
             let _ = io::stdin().read(&mut seq);
             if seq[0] == b'[' {
                 match seq[1] {
-                    b'A' => b'w',
-                    b'B' => b's',
-                    b'C' => b'd',
-                    b'D' => b'a',
-                    _    => c[0],
+                    b'A' => Key::ArrowUp,
+                    b'B' => Key::ArrowDown,
+                    b'C' => Key::ArrowRight,
+                    b'D' => Key::ArrowLeft,
+                    _    => Key::Character(c[0]),
                 }
             } else {
-                c[0]
+                Key::Character(c[0])
             }
         } else {
-            c[0]
+            Key::Character(c[0])
         }
     }
 
-    fn move_cursor(&mut self, key: u8) {
+    fn move_cursor(&mut self, key: Key) {
         match key {
-            b'a' => self.cursor_x -= 1,
-            b'd' => self.cursor_x += 1,
-            b'w' => self.cursor_y -= 1,
-            b's' => self.cursor_y += 1,
-            _    => (),
+            Key::ArrowLeft  => self.cursor_x -= 1,
+            Key::ArrowRight => self.cursor_x += 1,
+            Key::ArrowUp    => self.cursor_y -= 1,
+            Key::ArrowDown  => self.cursor_y += 1,
+            _               => (),
         }
     }
 
     pub fn process_keypress(&mut self) {
         let c = Self::read_key();
-        if c == Self::ctrl_key(b'q') {
-            let _ = io::stdout().write(b"\x1b[2J");
-            let _ = io::stdout().write(b"\x1b[H");
-            let _ = io::stdout().flush();
-            process::exit(0)
-        }
         match c {
-            b'a' => self.move_cursor(c),
-            b'd' => self.move_cursor(c),
-            b'w' => self.move_cursor(c),
-            b's' => self.move_cursor(c),
-            _    => (),
+            Key::Character(c) => {
+                if c == Self::ctrl_key(b'q') {
+                    let _ = io::stdout().write(b"\x1b[2J");
+                    let _ = io::stdout().write(b"\x1b[H");
+                    let _ = io::stdout().flush();
+                    process::exit(0)
+                }
+            },
+            _ => self.move_cursor(c),
         }
     }
 }
