@@ -11,7 +11,7 @@ pub struct Editor {
     cursor_y: u16,
     screen_rows: u16,
     screen_cols: u16,
-    buffer: String,
+    write_buffer: String,
 }
 
 impl Editor {
@@ -23,20 +23,20 @@ impl Editor {
             cursor_y: 0,
             screen_rows: rows,
             screen_cols: cols,
-            buffer: String::new(),
+            write_buffer: String::new(),
         }
     }
 
     pub fn refresh_screen(&mut self) {
-        self.buffer.push_str("\x1b[?25l");
-        self.buffer.push_str("\x1b[H");
+        self.write_buffer.push_str("\x1b[?25l");
+        self.write_buffer.push_str("\x1b[H");
         self.draw_rows();
         let set_cursor = format!("\x1b[{};{}H", self.cursor_y + 1, self.cursor_x + 1);
-        self.buffer.push_str(&set_cursor);
-        self.buffer.push_str("\x1b[?25h");
-        let _ = io::stdout().write(self.buffer.as_bytes());
+        self.write_buffer.push_str(&set_cursor);
+        self.write_buffer.push_str("\x1b[?25h");
+        let _ = io::stdout().write(self.write_buffer.as_bytes());
         let _ = io::stdout().flush();
-        self.buffer.clear();
+        self.write_buffer.clear();
     }
 
     fn draw_rows(&mut self) {
@@ -49,19 +49,19 @@ impl Editor {
 
                 let padding = (self.screen_cols as usize - welcome.len()) / 2;
                 if padding > 0 {
-                    self.buffer.push_str("~");
+                    self.write_buffer.push_str("~");
                     let spaces = " ".repeat(padding - 1);
-                    self.buffer.push_str(&spaces);
+                    self.write_buffer.push_str(&spaces);
                 }
 
-                self.buffer.push_str(&welcome);
+                self.write_buffer.push_str(&welcome);
             } else {
-                self.buffer.push_str("~");
+                self.write_buffer.push_str("~");
             }
 
-            self.buffer.push_str("\x1b[K");
+            self.write_buffer.push_str("\x1b[K");
             if i < self.screen_rows - 1 {
-                self.buffer.push_str("\r\n");
+                self.write_buffer.push_str("\r\n");
             }
         }
     }
