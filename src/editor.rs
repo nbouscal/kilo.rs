@@ -15,10 +15,14 @@ pub struct Editor {
 
 enum Key {
     Character(u8),
-    ArrowLeft,
-    ArrowRight,
-    ArrowUp,
-    ArrowDown,
+    Arrow(ArrowKey),
+}
+
+enum ArrowKey {
+    Left,
+    Right,
+    Up,
+    Down,
 }
 
 impl Editor {
@@ -83,10 +87,10 @@ impl Editor {
             let _ = io::stdin().read(&mut seq);
             if seq[0] == b'[' {
                 match seq[1] {
-                    b'A' => Key::ArrowUp,
-                    b'B' => Key::ArrowDown,
-                    b'C' => Key::ArrowRight,
-                    b'D' => Key::ArrowLeft,
+                    b'A' => Key::Arrow(ArrowKey::Up),
+                    b'B' => Key::Arrow(ArrowKey::Down),
+                    b'C' => Key::Arrow(ArrowKey::Right),
+                    b'D' => Key::Arrow(ArrowKey::Left),
                     _    => Key::Character(c[0]),
                 }
             } else {
@@ -97,21 +101,20 @@ impl Editor {
         }
     }
 
-    fn move_cursor(&mut self, key: Key) {
+    fn move_cursor(&mut self, key: ArrowKey) {
         match key {
-            Key::ArrowLeft  => {
+            ArrowKey::Left  => {
                 if self.cursor_x > 0 { self.cursor_x -= 1 }
             },
-            Key::ArrowRight => {
+            ArrowKey::Right => {
                 if self.cursor_x < self.screen_cols - 1 { self.cursor_x += 1 }
             },
-            Key::ArrowUp    => {
+            ArrowKey::Up    => {
                 if self.cursor_y > 0 { self.cursor_y -= 1 }
             },
-            Key::ArrowDown  => {
+            ArrowKey::Down  => {
                 if self.cursor_y < self.screen_rows - 1 { self.cursor_y += 1 }
             },
-            _               => (),
         }
     }
 
@@ -126,7 +129,7 @@ impl Editor {
                     process::exit(0)
                 }
             },
-            _ => self.move_cursor(c),
+            Key::Arrow(a) => self.move_cursor(a),
         }
     }
 }
