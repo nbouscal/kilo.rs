@@ -16,6 +16,8 @@ pub struct Editor {
 enum Key {
     Character(u8),
     Arrow(ArrowKey),
+    PageUp,
+    PageDown,
 }
 
 enum ArrowKey {
@@ -86,12 +88,24 @@ impl Editor {
             let mut seq = [0; 3];
             let _ = io::stdin().read(&mut seq);
             if seq[0] == b'[' {
-                match seq[1] {
-                    b'A' => Key::Arrow(ArrowKey::Up),
-                    b'B' => Key::Arrow(ArrowKey::Down),
-                    b'C' => Key::Arrow(ArrowKey::Right),
-                    b'D' => Key::Arrow(ArrowKey::Left),
-                    _    => Key::Character(c[0]),
+                if seq[1] >= b'0' && seq[1] <= b'9' {
+                    if seq[2] == b'~' {
+                        match seq[1] {
+                            b'5' => Key::PageUp,
+                            b'6' => Key::PageDown,
+                            _    => Key::Character(c[0]),
+                        }
+                    } else {
+                        Key::Character(c[0])
+                    }
+                } else {
+                    match seq[1] {
+                        b'A' => Key::Arrow(ArrowKey::Up),
+                        b'B' => Key::Arrow(ArrowKey::Down),
+                        b'C' => Key::Arrow(ArrowKey::Right),
+                        b'D' => Key::Arrow(ArrowKey::Left),
+                        _    => Key::Character(c[0]),
+                    }
                 }
             } else {
                 Key::Character(c[0])
@@ -130,6 +144,16 @@ impl Editor {
                 }
             },
             Key::Arrow(a) => self.move_cursor(a),
+            Key::PageUp => {
+                for _ in 0..self.screen_rows {
+                    self.move_cursor(ArrowKey::Up)
+                }
+            },
+            Key::PageDown => {
+                for _ in 0..self.screen_rows {
+                    self.move_cursor(ArrowKey::Down)
+                }
+            },
         }
     }
 }
