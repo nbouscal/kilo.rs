@@ -7,6 +7,10 @@ use std::process;
 
 const KILO_VERSION: &'static str = "0.0.1";
 
+struct Row {
+    contents: String,
+}
+
 pub struct Editor {
     cursor_x: u16,
     cursor_y: u16,
@@ -15,7 +19,7 @@ pub struct Editor {
     screen_rows: u16,
     screen_cols: u16,
     write_buffer: String,
-    rows: Vec<String>,
+    rows: Vec<Row>,
 }
 
 impl Editor {
@@ -37,7 +41,12 @@ impl Editor {
     pub fn open_file(&mut self, filename: &str) {
         let f = File::open(filename).unwrap(); // TODO: Handle error
         let reader = BufReader::new(f);
-        self.rows = reader.lines().map(|line| line.unwrap_or(String::new())).collect();
+        self.rows = reader.lines()
+            .map(|line|
+                 Row {
+                     contents: line.unwrap_or(String::new())
+                 }
+                ).collect();
     }
 
     pub fn refresh_screen(&mut self) {
@@ -98,7 +107,7 @@ impl Editor {
                     self.write_buffer.push_str("~");
                 }
             } else {
-                let ref mut row = self.rows[file_row as usize];
+                let ref mut row = self.rows[file_row as usize].contents;
                 let mut row = row.chars().skip(self.col_offset as usize).collect::<String>();
                 Self::safe_truncate(&mut row, self.screen_cols as usize);
                 self.write_buffer.push_str(&row);
@@ -123,7 +132,7 @@ impl Editor {
         if self.cursor_y as usize >= self.rows.len() {
             None
         } else {
-            Some(self.rows[self.cursor_y as usize].len() as u16)
+            Some(self.rows[self.cursor_y as usize].contents.len() as u16)
         }
     }
 
