@@ -130,7 +130,12 @@ impl Editor {
     fn move_cursor(&mut self, key: ArrowKey) {
         match key {
             ArrowKey::Left  => {
-                if self.cursor_x > 0 { self.cursor_x -= 1 }
+                if self.cursor_x > 0 {
+                    self.cursor_x -= 1
+                } else if self.cursor_y > 0 {
+                    self.cursor_y -= 1;
+                    self.cursor_x = self.current_row_size();
+                }
             },
             ArrowKey::Right => {
                 if self.cursor_x < self.current_row_size() {
