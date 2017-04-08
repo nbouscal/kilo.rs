@@ -120,12 +120,19 @@ impl Editor {
     }
 
     fn move_cursor(&mut self, key: ArrowKey) {
+        let current_row_size = if self.cursor_y as usize >= self.rows.len() {
+            0
+        } else {
+            self.rows[self.cursor_y as usize].len()
+        };
         match key {
             ArrowKey::Left  => {
                 if self.cursor_x > 0 { self.cursor_x -= 1 }
             },
             ArrowKey::Right => {
-                self.cursor_x += 1
+                if (self.cursor_x as usize) < current_row_size {
+                    self.cursor_x += 1
+                }
             },
             ArrowKey::Up    => {
                 if self.cursor_y > 0 { self.cursor_y -= 1 }
