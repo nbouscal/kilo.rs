@@ -12,6 +12,7 @@ pub struct Editor {
     screen_rows: u16,
     screen_cols: u16,
     write_buffer: String,
+    rows: Vec<String>,
 }
 
 impl Editor {
@@ -24,7 +25,12 @@ impl Editor {
             screen_rows: rows,
             screen_cols: cols,
             write_buffer: String::new(),
+            rows: Vec::new(),
         }
+    }
+
+    pub fn open_file(&mut self) {
+        self.rows = vec!["Hello, world!".to_string()];
     }
 
     pub fn refresh_screen(&mut self) {
@@ -41,22 +47,26 @@ impl Editor {
 
     fn draw_rows(&mut self) {
         for i in 0..self.screen_rows {
-            if i == self.screen_rows / 3 {
-                let mut welcome = format!("Kilo editor -- version {}", KILO_VERSION);
-                if welcome.len() > self.screen_cols as usize {
-                    welcome.truncate(self.screen_cols as usize)
-                }
+            if i as usize >= self.rows.len() {
+                if i == self.screen_rows / 3 {
+                    let mut welcome = format!("Kilo editor -- version {}", KILO_VERSION);
+                    welcome.truncate(self.screen_cols as usize);
 
-                let padding = (self.screen_cols as usize - welcome.len()) / 2;
-                if padding > 0 {
+                    let padding = (self.screen_cols as usize - welcome.len()) / 2;
+                    if padding > 0 {
+                        self.write_buffer.push_str("~");
+                        let spaces = " ".repeat(padding - 1);
+                        self.write_buffer.push_str(&spaces);
+                    }
+
+                    self.write_buffer.push_str(&welcome);
+                } else {
                     self.write_buffer.push_str("~");
-                    let spaces = " ".repeat(padding - 1);
-                    self.write_buffer.push_str(&spaces);
                 }
-
-                self.write_buffer.push_str(&welcome);
             } else {
-                self.write_buffer.push_str("~");
+                let ref mut row = self.rows[0];
+                row.truncate(self.screen_cols as usize);
+                self.write_buffer.push_str(&row);
             }
 
             self.write_buffer.push_str("\x1b[K");
