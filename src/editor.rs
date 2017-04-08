@@ -6,6 +6,8 @@ use std::process;
 const KILO_VERSION: &'static str = "0.0.1";
 
 pub struct Editor {
+    cursor_x: u16,
+    cursor_y: u16,
     screen_rows: u16,
     screen_cols: u16,
     buffer: String,
@@ -16,6 +18,8 @@ impl Editor {
         // TODO: Default to 24x80 if None?
         let (rows, cols) = terminal::get_window_size().unwrap();
         Editor {
+            cursor_x: 0,
+            cursor_y: 0,
             screen_rows: rows,
             screen_cols: cols,
             buffer: String::new(),
@@ -26,7 +30,8 @@ impl Editor {
         self.buffer.push_str("\x1b[?25l");
         self.buffer.push_str("\x1b[H");
         self.draw_rows();
-        self.buffer.push_str("\x1b[H");
+        let set_cursor = format!("\x1b[{};{}H", self.cursor_y + 1, self.cursor_x + 1);
+        self.buffer.push_str(&set_cursor);
         self.buffer.push_str("\x1b[?25h");
         let _ = io::stdout().write(self.buffer.as_bytes());
         let _ = io::stdout().flush();
@@ -68,13 +73,30 @@ impl Editor {
         c[0]
     }
 
-    pub fn process_keypress(&self) {
+    fn move_cursor(&mut self, key: u8) {
+        match key {
+            b'a' => self.cursor_x -= 1,
+            b'd' => self.cursor_x += 1,
+            b'w' => self.cursor_y -= 1,
+            b's' => self.cursor_y += 1,
+            _    => (),
+        }
+    }
+
+    pub fn process_keypress(&mut self) {
         let c = Self::read_key();
         if c == Self::ctrl_key(b'q') {
             let _ = io::stdout().write(b"\x1b[2J");
             let _ = io::stdout().write(b"\x1b[H");
             let _ = io::stdout().flush();
             process::exit(0)
+        }
+        match c {
+            b'a' => self.move_cursor(c),
+            b'd' => self.move_cursor(c),
+            b'w' => self.move_cursor(c),
+            b's' => self.move_cursor(c),
+            _    => (),
         }
     }
 }
