@@ -11,6 +11,7 @@ pub struct Editor {
     cursor_x: u16,
     cursor_y: u16,
     row_offset: u16,
+    col_offset: u16,
     screen_rows: u16,
     screen_cols: u16,
     write_buffer: String,
@@ -25,6 +26,7 @@ impl Editor {
             cursor_x: 0,
             cursor_y: 0,
             row_offset: 0,
+            col_offset: 0,
             screen_rows: rows,
             screen_cols: cols,
             write_buffer: String::new(),
@@ -44,7 +46,8 @@ impl Editor {
         self.write_buffer.push_str("\x1b[H");
         self.draw_rows();
         let cursor_y = self.cursor_y - self.row_offset + 1;
-        let set_cursor = format!("\x1b[{};{}H", cursor_y, self.cursor_x + 1);
+        let cursor_x = self.cursor_x - self.col_offset + 1;
+        let set_cursor = format!("\x1b[{};{}H", cursor_y, cursor_x);
         self.write_buffer.push_str(&set_cursor);
         self.write_buffer.push_str("\x1b[?25h");
         let _ = io::stdout().write(self.write_buffer.as_bytes());
@@ -67,6 +70,11 @@ impl Editor {
             self.row_offset = self.cursor_y;
         } else if self.cursor_y >= self.row_offset + self.screen_rows {
             self.row_offset = self.cursor_y - self.screen_rows + 1;
+        }
+        if self.cursor_x < self.col_offset {
+            self.col_offset = self.cursor_x;
+        } else if self.cursor_x >= self.col_offset + self.screen_cols {
+            self.col_offset = self.cursor_x - self.screen_cols + 1;
         }
     }
 
@@ -91,7 +99,8 @@ impl Editor {
                 }
             } else {
                 let ref mut row = self.rows[file_row as usize];
-                Self::safe_truncate(row, self.screen_cols as usize);
+                let mut row = row.chars().skip(self.col_offset as usize).collect::<String>();
+                Self::safe_truncate(&mut row, self.screen_cols as usize);
                 self.write_buffer.push_str(&row);
             }
 
@@ -116,7 +125,7 @@ impl Editor {
                 if self.cursor_x > 0 { self.cursor_x -= 1 }
             },
             ArrowKey::Right => {
-                if self.cursor_x < self.screen_cols - 1 { self.cursor_x += 1 }
+                self.cursor_x += 1
             },
             ArrowKey::Up    => {
                 if self.cursor_y > 0 { self.cursor_y -= 1 }
