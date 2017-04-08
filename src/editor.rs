@@ -10,6 +10,7 @@ const KILO_VERSION: &'static str = "0.0.1";
 pub struct Editor {
     cursor_x: u16,
     cursor_y: u16,
+    row_offset: u16,
     screen_rows: u16,
     screen_cols: u16,
     write_buffer: String,
@@ -23,6 +24,7 @@ impl Editor {
         Editor {
             cursor_x: 0,
             cursor_y: 0,
+            row_offset: 0,
             screen_rows: rows,
             screen_cols: cols,
             write_buffer: String::new(),
@@ -37,10 +39,12 @@ impl Editor {
     }
 
     pub fn refresh_screen(&mut self) {
+        self.scroll();
         self.write_buffer.push_str("\x1b[?25l");
         self.write_buffer.push_str("\x1b[H");
         self.draw_rows();
-        let set_cursor = format!("\x1b[{};{}H", self.cursor_y + 1, self.cursor_x + 1);
+        let cursor_y = self.cursor_y - self.row_offset + 1;
+        let set_cursor = format!("\x1b[{};{}H", cursor_y, self.cursor_x + 1);
         self.write_buffer.push_str(&set_cursor);
         self.write_buffer.push_str("\x1b[?25h");
         let _ = io::stdout().write(self.write_buffer.as_bytes());
@@ -58,9 +62,18 @@ impl Editor {
         }
     }
 
+    fn scroll(&mut self) {
+        if self.cursor_y < self.row_offset {
+            self.row_offset = self.cursor_y;
+        } else if self.cursor_y >= self.row_offset + self.screen_rows {
+            self.row_offset = self.cursor_y - self.screen_rows + 1;
+        }
+    }
+
     fn draw_rows(&mut self) {
         for i in 0..self.screen_rows {
-            if i as usize >= self.rows.len() {
+            let file_row = i + self.row_offset;
+            if file_row as usize >= self.rows.len() {
                 if self.rows.is_empty() && i == self.screen_rows / 3 {
                     let mut welcome = format!("Kilo editor -- version {}", KILO_VERSION);
                     Self::safe_truncate(&mut welcome, self.screen_cols as usize);
@@ -77,7 +90,7 @@ impl Editor {
                     self.write_buffer.push_str("~");
                 }
             } else {
-                let ref mut row = self.rows[i as usize];
+                let ref mut row = self.rows[file_row as usize];
                 Self::safe_truncate(row, self.screen_cols as usize);
                 self.write_buffer.push_str(&row);
             }
@@ -109,7 +122,9 @@ impl Editor {
                 if self.cursor_y > 0 { self.cursor_y -= 1 }
             },
             ArrowKey::Down  => {
-                if self.cursor_y < self.screen_rows - 1 { self.cursor_y += 1 }
+                if (self.cursor_y as usize) < self.rows.len() {
+                    self.cursor_y += 1
+                }
             },
         }
     }
