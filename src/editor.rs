@@ -1,7 +1,8 @@
 use key::{Key, ArrowKey};
 use terminal;
 
-use std::io::{self, Read, Write};
+use std::io::{self, Read, BufRead, BufReader, Write};
+use std::fs::File;
 use std::process;
 
 const KILO_VERSION: &'static str = "0.0.1";
@@ -29,8 +30,18 @@ impl Editor {
         }
     }
 
-    pub fn open_file(&mut self) {
-        self.rows = vec!["Hello, world!".to_string()];
+    pub fn open_file(&mut self, filename: &str) {
+        let f = File::open(filename).unwrap(); // TODO: Handle error
+        let mut reader = BufReader::new(f);
+        let mut line = String::new();
+        let _ = reader.read_line(&mut line);
+        let has_newline;
+        {
+            let bytes = line.as_bytes();
+            has_newline = bytes[bytes.len() - 1] == b'\n' || bytes[bytes.len() - 1] == b'\r';
+        }
+        if has_newline { line.pop(); }
+        self.rows = vec![line];
     }
 
     pub fn refresh_screen(&mut self) {
@@ -48,7 +59,7 @@ impl Editor {
     fn draw_rows(&mut self) {
         for i in 0..self.screen_rows {
             if i as usize >= self.rows.len() {
-                if i == self.screen_rows / 3 {
+                if self.rows.is_empty() && i == self.screen_rows / 3 {
                     let mut welcome = format!("Kilo editor -- version {}", KILO_VERSION);
                     welcome.truncate(self.screen_cols as usize);
 
