@@ -40,6 +40,14 @@ impl Editor {
                 if welcome.len() > self.screen_cols as usize {
                     welcome.truncate(self.screen_cols as usize)
                 }
+
+                let padding = (self.screen_cols as usize - welcome.len()) / 2;
+                if padding > 0 {
+                    self.buffer.push_str("~");
+                    let spaces = " ".repeat(padding - 1);
+                    self.buffer.push_str(&spaces);
+                }
+
                 self.buffer.push_str(&welcome);
             } else {
                 self.buffer.push_str("~");
