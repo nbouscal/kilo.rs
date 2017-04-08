@@ -99,10 +99,18 @@ impl Editor {
 
     fn move_cursor(&mut self, key: Key) {
         match key {
-            Key::ArrowLeft  => self.cursor_x -= 1,
-            Key::ArrowRight => self.cursor_x += 1,
-            Key::ArrowUp    => self.cursor_y -= 1,
-            Key::ArrowDown  => self.cursor_y += 1,
+            Key::ArrowLeft  => {
+                if self.cursor_x > 0 { self.cursor_x -= 1 }
+            },
+            Key::ArrowRight => {
+                if self.cursor_x < self.screen_cols - 1 { self.cursor_x += 1 }
+            },
+            Key::ArrowUp    => {
+                if self.cursor_y > 0 { self.cursor_y -= 1 }
+            },
+            Key::ArrowDown  => {
+                if self.cursor_y < self.screen_rows - 1 { self.cursor_y += 1 }
+            },
             _               => (),
         }
     }
