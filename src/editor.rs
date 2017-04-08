@@ -70,7 +70,23 @@ impl Editor {
     fn read_key() -> u8 {
         let mut c = [0; 1];
         let _ = io::stdin().read(&mut c);
-        c[0]
+        if c[0] == b'\x1b' {
+            let mut seq = [0; 3];
+            let _ = io::stdin().read(&mut seq);
+            if seq[0] == b'[' {
+                match seq[1] {
+                    b'A' => b'w',
+                    b'B' => b's',
+                    b'C' => b'd',
+                    b'D' => b'a',
+                    _    => c[0],
+                }
+            } else {
+                c[0]
+            }
+        } else {
+            c[0]
+        }
     }
 
     fn move_cursor(&mut self, key: u8) {
