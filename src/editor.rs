@@ -2,13 +2,16 @@ use key::{Key, ArrowKey};
 use terminal;
 
 use std::io::{self, Read, BufRead, BufReader, Write};
+use std::iter;
 use std::fs::File;
 use std::process;
 
 const KILO_VERSION: &'static str = "0.0.1";
+const KILO_TAB_STOP: usize = 8;
 
 struct Row {
     contents: String,
+    render: String,
 }
 
 pub struct Editor {
@@ -20,6 +23,31 @@ pub struct Editor {
     screen_cols: u16,
     write_buffer: String,
     rows: Vec<Row>,
+}
+
+impl Row {
+    pub fn from_string(s: String) -> Self {
+        Row {
+            contents: s.clone(),
+            render: Self::render_string(s),
+        }
+    }
+
+    fn render_string(s: String) -> String {
+        let mut idx = 0;
+        let renderer = |c|
+            if c == '\t' {
+                let n = KILO_TAB_STOP - (idx % KILO_TAB_STOP);
+                idx += n;
+                iter::repeat(' ').take(n)
+            } else {
+                idx += 1;
+                // This is the same as iter::once(c), but the types of
+                // the branches of the conditional have to line up.
+                iter::repeat(c).take(1)
+            };
+        s.chars().flat_map(renderer).collect()
+    }
 }
 
 impl Editor {
@@ -42,11 +70,8 @@ impl Editor {
         let f = File::open(filename).unwrap(); // TODO: Handle error
         let reader = BufReader::new(f);
         self.rows = reader.lines()
-            .map(|line|
-                 Row {
-                     contents: line.unwrap_or(String::new())
-                 }
-                ).collect();
+            .map(|line| line.unwrap_or(String::new()))
+            .map(Row::from_string).collect();
     }
 
     pub fn refresh_screen(&mut self) {
@@ -107,7 +132,7 @@ impl Editor {
                     self.write_buffer.push_str("~");
                 }
             } else {
-                let ref mut row = self.rows[file_row as usize].contents;
+                let ref mut row = self.rows[file_row as usize].render;
                 let mut row = row.chars().skip(self.col_offset as usize).collect::<String>();
                 Self::safe_truncate(&mut row, self.screen_cols as usize);
                 self.write_buffer.push_str(&row);
