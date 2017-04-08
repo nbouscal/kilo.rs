@@ -1,6 +1,7 @@
 extern crate libc;
 
 mod editor;
+mod key;
 mod terminal;
 
 fn main() {

@@ -1,3 +1,4 @@
+use key::{Key, ArrowKey};
 use terminal;
 
 use std::io::{self, Read, Write};
@@ -11,23 +12,6 @@ pub struct Editor {
     screen_rows: u16,
     screen_cols: u16,
     buffer: String,
-}
-
-enum Key {
-    Character(u8),
-    Arrow(ArrowKey),
-    Delete,
-    Home,
-    End,
-    PageUp,
-    PageDown,
-}
-
-enum ArrowKey {
-    Left,
-    Right,
-    Up,
-    Down,
 }
 
 impl Editor {
@@ -85,50 +69,9 @@ impl Editor {
     fn ctrl_key(key: u8) -> u8 { key & 0x1f }
 
     fn read_key() -> Key {
-        let mut c = [0; 1];
-        let _ = io::stdin().read(&mut c);
-        if c[0] == b'\x1b' {
-            let mut seq = [0; 3];
-            let _ = io::stdin().read(&mut seq);
-            if seq[0] == b'[' {
-                if seq[1] >= b'0' && seq[1] <= b'9' {
-                    if seq[2] == b'~' {
-                        match seq[1] {
-                            b'1' => Key::Home,
-                            b'3' => Key::Delete,
-                            b'4' => Key::End,
-                            b'5' => Key::PageUp,
-                            b'6' => Key::PageDown,
-                            b'7' => Key::Home,
-                            b'8' => Key::End,
-                            _    => Key::Character(c[0]),
-                        }
-                    } else {
-                        Key::Character(c[0])
-                    }
-                } else {
-                    match seq[1] {
-                        b'A' => Key::Arrow(ArrowKey::Up),
-                        b'B' => Key::Arrow(ArrowKey::Down),
-                        b'C' => Key::Arrow(ArrowKey::Right),
-                        b'D' => Key::Arrow(ArrowKey::Left),
-                        b'H' => Key::Home,
-                        b'F' => Key::End,
-                        _    => Key::Character(c[0]),
-                    }
-                }
-            } else if seq[0] == b'O' {
-                match seq[1] {
-                    b'H' => Key::Home,
-                    b'F' => Key::End,
-                    _    => Key::Character(c[0]),
-                }
-            } else {
-                Key::Character(c[0])
-            }
-        } else {
-            Key::Character(c[0])
-        }
+        let mut bytes = [0; 4];
+        let _ = io::stdin().read(&mut bytes);
+        Key::from_bytes(&bytes)
     }
 
     fn move_cursor(&mut self, key: ArrowKey) {
@@ -149,8 +92,7 @@ impl Editor {
     }
 
     pub fn process_keypress(&mut self) {
-        let c = Self::read_key();
-        match c {
+        match Self::read_key() {
             Key::Character(c) => {
                 if c == Self::ctrl_key(b'q') {
                     let _ = io::stdout().write(b"\x1b[2J");
