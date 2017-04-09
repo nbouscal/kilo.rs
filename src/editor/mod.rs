@@ -1,6 +1,7 @@
+mod key;
 mod row;
 
-use key::{Key, ArrowKey};
+use self::key::{Key, ArrowKey};
 use self::row::Row;
 use terminal;
 use util;
