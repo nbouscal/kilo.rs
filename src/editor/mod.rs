@@ -59,6 +59,13 @@ impl Editor {
         self.cursor_x += 1;
     }
 
+    fn rows_to_string(&self) -> String {
+        self.rows.iter()
+            .map(|row| row.contents.clone())
+            .collect::<Vec<String>>()
+            .join("\n")
+    }
+
     pub fn open_file(&mut self, filename: &str) {
         self.filename = filename.to_string();
         let f = File::open(filename).unwrap(); // TODO: Handle error
@@ -66,6 +73,13 @@ impl Editor {
         self.rows = reader.lines()
             .map(|line| line.unwrap_or(String::new()))
             .map(Row::from_string).collect();
+    }
+
+    pub fn save_file(&mut self) {
+        if self.filename.is_empty() { return }
+        let mut f = File::create(&self.filename).unwrap(); // TODO: Handle error
+        let bytes = f.write(&self.rows_to_string().as_bytes()).unwrap();
+        self.set_status_message(&format!("{} bytes written to disk", bytes));
     }
 
     fn rendered_cursor_x(&self) -> u16 {
@@ -247,6 +261,7 @@ impl Editor {
         if key.is_none() { return }
         match key.unwrap() {
             Key::Character(c) => self.insert_char(c),
+            Key::Control('S') => self.save_file(),
             Key::Control('Q') => Self::exit(),
             Key::Control(_)   => (),
             Key::Arrow(a)     => self.move_cursor(a),
