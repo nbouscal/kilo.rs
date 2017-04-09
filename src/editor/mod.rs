@@ -244,13 +244,13 @@ impl Editor {
         if key.is_none() { return }
         match key.unwrap() {
             Key::Character(c) => {
-                if c == util::ctrl_key(b'q') {
+                if c == util::ctrl_key(b'q') as char {
                     let _ = io::stdout().write(b"\x1b[2J");
                     let _ = io::stdout().write(b"\x1b[H");
                     let _ = io::stdout().flush();
                     process::exit(0)
                 } else {
-                    self.insert_char(c as char);
+                    self.insert_char(c);
                 }
             },
             Key::Arrow(a) => self.move_cursor(a),

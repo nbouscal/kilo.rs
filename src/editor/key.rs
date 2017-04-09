@@ -1,5 +1,5 @@
 pub enum Key {
-    Character(u8),
+    Character(char),
     Arrow(ArrowKey),
     Delete,
     Home,
@@ -18,7 +18,7 @@ pub enum ArrowKey {
 impl Key {
     pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
         if bytes[0] == 0 { return None }
-        let default = Some(Key::Character(bytes[0]));
+        let default = Some(Key::Character(bytes[0] as char));
         if bytes[0] == b'\x1b' {
             if bytes[1] == b'[' {
                 if bytes[2] >= b'0' && bytes[2] <= b'9' {
