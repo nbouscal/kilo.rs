@@ -173,6 +173,8 @@ impl Editor {
     }
 
     fn read_key() -> Option<Key> {
+        // FIXME: This is the likely source of a bug where if you spam
+        //        arrow keys fast enough, it inserts [ characters
         let mut bytes = [0; 4];
         let _ = io::stdin().read(&mut bytes);
         Key::from_bytes(&bytes)
