@@ -23,6 +23,7 @@ pub struct Editor {
     screen_cols: u16,
     write_buffer: String,
     rows: Vec<Row>,
+    filename: String,
 }
 
 impl Row {
@@ -75,10 +76,12 @@ impl Editor {
             screen_cols: cols,
             write_buffer: String::new(),
             rows: Vec::new(),
+            filename: String::new(),
         }
     }
 
     pub fn open_file(&mut self, filename: &str) {
+        self.filename = filename.to_string();
         let f = File::open(filename).unwrap(); // TODO: Handle error
         let reader = BufReader::new(f);
         self.rows = reader.lines()
@@ -164,7 +167,23 @@ impl Editor {
 
     fn draw_status_bar(&mut self) {
         self.write_buffer.push_str("\x1b[7m");
-        self.write_buffer.push_str(&" ".repeat(self.screen_cols as usize));
+
+        let mut filename = self.filename.clone();
+        if filename.is_empty() {
+            filename.push_str("[No Name]")
+        } else {
+            Self::safe_truncate(&mut filename, 20);
+        }
+        let mut status = format!("{} - {} lines", filename, self.rows.len());
+        let rstatus = format!("{}/{}", self.cursor_y + 1, self.rows.len());
+        if self.screen_cols as usize > status.len() + rstatus.len() {
+            let padding = self.screen_cols as usize - status.len() - rstatus.len();
+            status.push_str(&" ".repeat(padding));
+        }
+        status.push_str(&rstatus);
+        Self::safe_truncate(&mut status, self.screen_cols as usize);
+        self.write_buffer.push_str(&status);
+
         self.write_buffer.push_str("\x1b[m");
     }
 
