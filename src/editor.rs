@@ -236,11 +236,13 @@ impl Editor {
             Key::Home => self.cursor_x = 0,
             Key::End => self.cursor_x = self.screen_cols - 1,
             Key::PageUp => {
+                self.cursor_y = self.row_offset;
                 for _ in 0..self.screen_rows {
                     self.move_cursor(ArrowKey::Up)
                 }
             },
             Key::PageDown => {
+                self.cursor_y = self.row_offset + self.screen_rows - 1;
                 for _ in 0..self.screen_rows {
                     self.move_cursor(ArrowKey::Down)
                 }
