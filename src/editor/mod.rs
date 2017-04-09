@@ -23,6 +23,7 @@ pub struct Editor {
     screen_cols: u16,
     write_buffer: String,
     rows: Vec<Row>,
+    dirty: bool,
     filename: String,
     status_msg: String,
     status_time: SystemTime,
@@ -41,6 +42,7 @@ impl Editor {
             screen_cols: cols,
             write_buffer: String::new(),
             rows: Vec::new(),
+            dirty: false,
             filename: String::new(),
             status_msg: String::new(),
             status_time: SystemTime::now(),
@@ -57,6 +59,7 @@ impl Editor {
             current_row.insert_char(cursor_x, c);
         }
         self.cursor_x += 1;
+        self.dirty = true;
     }
 
     fn rows_to_string(&self) -> String {
@@ -73,6 +76,7 @@ impl Editor {
         self.rows = reader.lines()
             .map(|line| line.unwrap_or(String::new()))
             .map(Row::from_string).collect();
+        self.dirty = false;
     }
 
     pub fn save_file(&mut self) {
@@ -80,6 +84,7 @@ impl Editor {
         let mut f = File::create(&self.filename).unwrap(); // TODO: Handle error
         let bytes = f.write(&self.rows_to_string().as_bytes()).unwrap();
         self.set_status_message(&format!("{} bytes written to disk", bytes));
+        self.dirty = false;
     }
 
     fn rendered_cursor_x(&self) -> u16 {
@@ -158,7 +163,8 @@ impl Editor {
         } else {
             util::safe_truncate(&mut filename, 20);
         }
-        let mut status = format!("{} - {} lines", filename, self.rows.len());
+        let modified = if self.dirty { "(modified)" } else { "" };
+        let mut status = format!("{} - {} lines {}", filename, self.rows.len(), modified);
         let rstatus = format!("{}/{}", self.cursor_y + 1, self.rows.len());
         if self.screen_cols as usize > status.len() + rstatus.len() {
             let padding = self.screen_cols as usize - status.len() - rstatus.len();
