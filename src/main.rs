@@ -16,6 +16,8 @@ fn main() {
         editor.open_file(&filename);
     }
 
+    editor.set_status_message("HELP: Ctrl-Q = quit");
+
     loop {
         editor.refresh_screen();
         editor.process_keypress();

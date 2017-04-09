@@ -5,6 +5,7 @@ use std::io::{self, Read, BufRead, BufReader, Write};
 use std::iter;
 use std::fs::File;
 use std::process;
+use std::time::{Duration, SystemTime};
 
 const KILO_VERSION: &'static str = "0.0.1";
 const KILO_TAB_STOP: usize = 8;
@@ -24,6 +25,8 @@ pub struct Editor {
     write_buffer: String,
     rows: Vec<Row>,
     filename: String,
+    status_msg: String,
+    status_time: SystemTime,
 }
 
 impl Row {
@@ -72,11 +75,13 @@ impl Editor {
             cursor_y: 0,
             row_offset: 0,
             col_offset: 0,
-            screen_rows: rows - 1, // Leave one row for status bar
+            screen_rows: rows - 2, // Leave space for status and message bars
             screen_cols: cols,
             write_buffer: String::new(),
             rows: Vec::new(),
             filename: String::new(),
+            status_msg: String::new(),
+            status_time: SystemTime::now(),
         }
     }
 
@@ -100,6 +105,7 @@ impl Editor {
         self.write_buffer.push_str("\x1b[H");
         self.draw_rows();
         self.draw_status_bar();
+        self.draw_message_bar();
         let cursor_y = self.cursor_y - self.row_offset + 1;
         let cursor_x = self.rendered_cursor_x() - self.col_offset + 1;
         let set_cursor = format!("\x1b[{};{}H", cursor_y, cursor_x);
@@ -185,6 +191,21 @@ impl Editor {
         self.write_buffer.push_str(&status);
 
         self.write_buffer.push_str("\x1b[m");
+        self.write_buffer.push_str("\r\n");
+    }
+
+    pub fn set_status_message(&mut self, msg: &str) {
+        self.status_msg = msg.to_string();
+        self.status_time = SystemTime::now();
+    }
+
+    fn draw_message_bar(&mut self) {
+        self.write_buffer.push_str("\x1b[K");
+        let mut message = self.status_msg.clone();
+        Self::safe_truncate(&mut message, self.screen_cols as usize);
+        if self.status_time.elapsed().unwrap() < Duration::from_secs(5) {
+            self.write_buffer.push_str(&message);
+        }
     }
 
     fn ctrl_key(key: u8) -> u8 { key & 0x1f }
