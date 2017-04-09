@@ -234,7 +234,7 @@ impl Editor {
             Key::Arrow(a) => self.move_cursor(a),
             Key::Delete => (),
             Key::Home => self.cursor_x = 0,
-            Key::End => self.cursor_x = self.screen_cols - 1,
+            Key::End => self.cursor_x = self.current_row_size().unwrap_or(0),
             Key::PageUp => {
                 self.cursor_y = self.row_offset;
                 for _ in 0..self.screen_rows {
