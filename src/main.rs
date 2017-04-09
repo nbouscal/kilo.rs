@@ -3,6 +3,7 @@ extern crate libc;
 mod editor;
 mod key;
 mod terminal;
+mod util;
 
 use std::env;
 

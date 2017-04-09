@@ -1,19 +1,16 @@
+mod row;
+
 use key::{Key, ArrowKey};
+use self::row::Row;
 use terminal;
+use util;
 
 use std::io::{self, Read, BufRead, BufReader, Write};
-use std::iter;
 use std::fs::File;
 use std::process;
 use std::time::{Duration, SystemTime};
 
 const KILO_VERSION: &'static str = "0.0.1";
-const KILO_TAB_STOP: usize = 8;
-
-struct Row {
-    contents: String,
-    render: String,
-}
 
 pub struct Editor {
     cursor_x: u16,
@@ -27,43 +24,6 @@ pub struct Editor {
     filename: String,
     status_msg: String,
     status_time: SystemTime,
-}
-
-impl Row {
-    pub fn from_string(s: String) -> Self {
-        Row {
-            contents: s.clone(),
-            render: Self::render_string(s),
-        }
-    }
-
-    pub fn rendered_cursor_x(&self, cursor_x: u16) -> u16 {
-        self.contents.chars()
-            .take(cursor_x as usize)
-            .fold(0, |acc, c| {
-                if c == '\t' {
-                    acc + KILO_TAB_STOP as u16 - (acc % KILO_TAB_STOP as u16)
-                } else {
-                    acc + 1
-                }
-        })
-    }
-
-    fn render_string(s: String) -> String {
-        let mut idx = 0;
-        let renderer = |c|
-            if c == '\t' {
-                let n = KILO_TAB_STOP - (idx % KILO_TAB_STOP);
-                idx += n;
-                iter::repeat(' ').take(n)
-            } else {
-                idx += 1;
-                // This is the same as iter::once(c), but the types of
-                // the branches of the conditional have to line up.
-                iter::repeat(c).take(1)
-            };
-        s.chars().flat_map(renderer).collect()
-    }
 }
 
 impl Editor {
@@ -116,16 +76,6 @@ impl Editor {
         self.write_buffer.clear();
     }
 
-    fn safe_truncate(string: &mut String, i: usize) {
-        if string.len() <= i {
-            return
-        } else if string.is_char_boundary(i) {
-            string.truncate(i)
-        } else {
-            Self::safe_truncate(string, i - 1)
-        }
-    }
-
     fn scroll(&mut self) {
         let rx = self.rendered_cursor_x();
         if self.cursor_y < self.row_offset {
@@ -146,7 +96,7 @@ impl Editor {
             if file_row as usize >= self.rows.len() {
                 if self.rows.is_empty() && i == self.screen_rows / 3 {
                     let mut welcome = format!("Kilo editor -- version {}", KILO_VERSION);
-                    Self::safe_truncate(&mut welcome, self.screen_cols as usize);
+                    util::safe_truncate(&mut welcome, self.screen_cols as usize);
 
                     let padding = (self.screen_cols as usize - welcome.len()) / 2;
                     if padding > 0 {
@@ -162,7 +112,7 @@ impl Editor {
             } else {
                 let ref mut row = self.rows[file_row as usize].render;
                 let mut row = row.chars().skip(self.col_offset as usize).collect::<String>();
-                Self::safe_truncate(&mut row, self.screen_cols as usize);
+                util::safe_truncate(&mut row, self.screen_cols as usize);
                 self.write_buffer.push_str(&row);
             }
 
@@ -178,7 +128,7 @@ impl Editor {
         if filename.is_empty() {
             filename.push_str("[No Name]")
         } else {
-            Self::safe_truncate(&mut filename, 20);
+            util::safe_truncate(&mut filename, 20);
         }
         let mut status = format!("{} - {} lines", filename, self.rows.len());
         let rstatus = format!("{}/{}", self.cursor_y + 1, self.rows.len());
@@ -187,7 +137,7 @@ impl Editor {
             status.push_str(&" ".repeat(padding));
         }
         status.push_str(&rstatus);
-        Self::safe_truncate(&mut status, self.screen_cols as usize);
+        util::safe_truncate(&mut status, self.screen_cols as usize);
         self.write_buffer.push_str(&status);
 
         self.write_buffer.push_str("\x1b[m");
@@ -202,13 +152,11 @@ impl Editor {
     fn draw_message_bar(&mut self) {
         self.write_buffer.push_str("\x1b[K");
         let mut message = self.status_msg.clone();
-        Self::safe_truncate(&mut message, self.screen_cols as usize);
+        util::safe_truncate(&mut message, self.screen_cols as usize);
         if self.status_time.elapsed().unwrap() < Duration::from_secs(5) {
             self.write_buffer.push_str(&message);
         }
     }
-
-    fn ctrl_key(key: u8) -> u8 { key & 0x1f }
 
     fn read_key() -> Key {
         let mut bytes = [0; 4];
@@ -269,7 +217,7 @@ impl Editor {
     pub fn process_keypress(&mut self) {
         match Self::read_key() {
             Key::Character(c) => {
-                if c == Self::ctrl_key(b'q') {
+                if c == util::ctrl_key(b'q') {
                     let _ = io::stdout().write(b"\x1b[2J");
                     let _ = io::stdout().write(b"\x1b[H");
                     let _ = io::stdout().flush();
