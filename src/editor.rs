@@ -33,6 +33,18 @@ impl Row {
         }
     }
 
+    pub fn rendered_cursor_x(&self, cursor_x: u16) -> u16 {
+        self.contents.chars()
+            .take(cursor_x as usize)
+            .fold(0, |acc, c| {
+                if c == '\t' {
+                    acc + KILO_TAB_STOP as u16 - (acc % KILO_TAB_STOP as u16)
+                } else {
+                    acc + 1
+                }
+        })
+    }
+
     fn render_string(s: String) -> String {
         let mut idx = 0;
         let renderer = |c|
@@ -74,13 +86,18 @@ impl Editor {
             .map(Row::from_string).collect();
     }
 
+    fn rendered_cursor_x(&self) -> u16 {
+        self.current_row()
+            .map_or(0, |row| row.rendered_cursor_x(self.cursor_x))
+    }
+
     pub fn refresh_screen(&mut self) {
         self.scroll();
         self.write_buffer.push_str("\x1b[?25l");
         self.write_buffer.push_str("\x1b[H");
         self.draw_rows();
         let cursor_y = self.cursor_y - self.row_offset + 1;
-        let cursor_x = self.cursor_x - self.col_offset + 1;
+        let cursor_x = self.rendered_cursor_x() - self.col_offset + 1;
         let set_cursor = format!("\x1b[{};{}H", cursor_y, cursor_x);
         self.write_buffer.push_str(&set_cursor);
         self.write_buffer.push_str("\x1b[?25h");
@@ -100,15 +117,16 @@ impl Editor {
     }
 
     fn scroll(&mut self) {
+        let rx = self.rendered_cursor_x();
         if self.cursor_y < self.row_offset {
             self.row_offset = self.cursor_y;
         } else if self.cursor_y >= self.row_offset + self.screen_rows {
             self.row_offset = self.cursor_y - self.screen_rows + 1;
         }
-        if self.cursor_x < self.col_offset {
-            self.col_offset = self.cursor_x;
-        } else if self.cursor_x >= self.col_offset + self.screen_cols {
-            self.col_offset = self.cursor_x - self.screen_cols + 1;
+        if rx < self.col_offset {
+            self.col_offset = rx;
+        } else if rx >= self.col_offset + self.screen_cols {
+            self.col_offset = rx - self.screen_cols + 1;
         }
     }
 
@@ -153,12 +171,16 @@ impl Editor {
         Key::from_bytes(&bytes)
     }
 
-    fn current_row_size(&self) -> Option<u16> {
+    fn current_row(&self) -> Option<&Row> {
         if self.cursor_y as usize >= self.rows.len() {
             None
         } else {
-            Some(self.rows[self.cursor_y as usize].contents.len() as u16)
+            Some(&self.rows[self.cursor_y as usize])
         }
+    }
+
+    fn current_row_size(&self) -> Option<u16> {
+        self.current_row().map(|row| row.contents.len() as u16)
     }
 
     fn move_cursor(&mut self, key: ArrowKey) {
