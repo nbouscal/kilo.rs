@@ -66,15 +66,27 @@ impl Editor {
     }
 
     pub fn delete_char(&mut self) {
+        if self.cursor_past_end() { return };
+        if self.cursor_x == 0 && self.cursor_y == 0 { return };
         let cursor_x = self.cursor_x as usize;
-        {
-            let current_row = self.current_row_mut();
-            if current_row.is_none() { return };
-            if cursor_x == 0 { return };
-            current_row.unwrap().delete_char(cursor_x - 1);
+        if cursor_x == 0 {
+            let cursor_y = self.cursor_y as usize;
+            self.cursor_x = self.rows[cursor_y - 1].contents.len() as u16;
+            // Is there a way to avoid this clone?
+            let s = self.current_row().unwrap().contents.clone();
+            self.rows[cursor_y - 1].append_string(&s);
+            self.delete_row(cursor_y);
+            self.cursor_y -= 1;
+        } else {
+            self.current_row_mut().unwrap().delete_char(cursor_x - 1);
+            self.cursor_x -= 1;
         }
-        self.cursor_x -= 1;
         self.dirty = true;
+    }
+
+    fn delete_row(&mut self, at: usize) {
+        if at >= self.rows.len() { return }
+        self.rows.remove(at);
     }
 
     fn rows_to_string(&self) -> String {

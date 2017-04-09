@@ -21,13 +21,18 @@ impl Row {
 
     pub fn insert_char(&mut self, at: usize, c: char) {
         self.contents.insert(at, c);
-        self.render = Self::render_string(self.contents.clone())
+        self.update_render();
     }
 
     pub fn delete_char(&mut self, at: usize) {
         if at >= self.contents.len() { return }
         self.contents.remove(at);
-        self.render = Self::render_string(self.contents.clone());
+        self.update_render();
+    }
+
+    pub fn append_string(&mut self, s: &str) {
+        self.contents.push_str(s);
+        self.update_render();
     }
 
     pub fn rendered_cursor_x(&self, cursor_x: u16) -> u16 {
@@ -40,6 +45,10 @@ impl Row {
                     acc + 1
                 }
         })
+    }
+
+    fn update_render(&mut self) {
+        self.render = Self::render_string(self.contents.clone());
     }
 
     fn render_string(s: String) -> String {
