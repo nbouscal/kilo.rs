@@ -13,6 +13,7 @@ use std::process;
 use std::time::{Duration, SystemTime};
 
 const KILO_VERSION: &'static str = "0.0.1";
+const KILO_QUIT_TIMES: u8 = 3;
 
 pub struct Editor {
     cursor_x: u16,
@@ -24,6 +25,7 @@ pub struct Editor {
     write_buffer: String,
     rows: Vec<Row>,
     dirty: bool,
+    quit_times: u8,
     filename: String,
     status_msg: String,
     status_time: SystemTime,
@@ -43,6 +45,7 @@ impl Editor {
             write_buffer: String::new(),
             rows: Vec::new(),
             dirty: false,
+            quit_times: KILO_QUIT_TIMES,
             filename: String::new(),
             status_msg: String::new(),
             status_time: SystemTime::now(),
@@ -268,7 +271,10 @@ impl Editor {
         match key.unwrap() {
             Key::Character(c) => self.insert_char(c),
             Key::Control('S') => self.save_file(),
-            Key::Control('Q') => Self::exit(),
+            Key::Control('Q') => {
+                self.exit();
+                return;
+            },
             Key::Control(_)   => (),
             Key::Arrow(a)     => self.move_cursor(a),
             Key::Escape       => (),
@@ -279,13 +285,20 @@ impl Editor {
             Key::PageUp       => self.page_up(),
             Key::PageDown     => self.page_down(),
         }
+        self.quit_times = KILO_QUIT_TIMES;
     }
 
-    fn exit() {
-        let _ = io::stdout().write(b"\x1b[2J");
-        let _ = io::stdout().write(b"\x1b[H");
-        let _ = io::stdout().flush();
-        process::exit(0)
+    fn exit(&mut self) {
+        if self.dirty && self.quit_times > 0 {
+            let quit_times = self.quit_times;
+            self.set_status_message(&format!("WARNING!!! File has unsaved changes. Press Ctrl-Q {} more times to quit.", quit_times));
+            self.quit_times -= 1;
+        } else {
+            let _ = io::stdout().write(b"\x1b[2J");
+            let _ = io::stdout().write(b"\x1b[H");
+            let _ = io::stdout().flush();
+            process::exit(0)
+        }
     }
 
     fn page_up(&mut self) {
