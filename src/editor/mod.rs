@@ -6,6 +6,7 @@ use self::row::Row;
 use terminal;
 use util;
 
+use std::cmp;
 use std::io::{self, Read, BufRead, BufReader, Write};
 use std::fs::File;
 use std::process;
@@ -264,7 +265,7 @@ impl Editor {
                 }
             },
             Key::PageDown => {
-                self.cursor_y = self.row_offset + self.screen_rows - 1;
+                self.cursor_y = cmp::min(self.rows.len() as u16, self.row_offset + self.screen_rows - 1);
                 for _ in 0..self.screen_rows {
                     self.move_cursor(ArrowKey::Down)
                 }
