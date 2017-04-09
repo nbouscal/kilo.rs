@@ -7,5 +7,3 @@ pub fn safe_truncate(string: &mut String, i: usize) {
         safe_truncate(string, i - 1)
     }
 }
-
-pub fn ctrl_key(key: u8) -> u8 { key & 0x1f }

@@ -1,5 +1,6 @@
 pub enum Key {
     Character(char),
+    Control(char),
     Arrow(ArrowKey),
     Delete,
     Home,
@@ -20,6 +21,7 @@ impl Key {
         match bytes[0] {
             0       => None,
             b'\x1b' => Self::from_escape_sequence(&bytes[1..]),
+            1...31  => Some(Key::Control((bytes[0] | 0x40) as char)),
             _       => Some(Key::Character(bytes[0] as char))
         }
     }
