@@ -245,30 +245,36 @@ impl Editor {
         if key.is_none() { return }
         match key.unwrap() {
             Key::Character(c) => self.insert_char(c),
-            Key::Control('Q') => {
-                    let _ = io::stdout().write(b"\x1b[2J");
-                    let _ = io::stdout().write(b"\x1b[H");
-                    let _ = io::stdout().flush();
-                    process::exit(0)
-            },
-            Key::Control(_) => (),
-            Key::Arrow(a) => self.move_cursor(a),
-            Key::Backspace => (),
-            Key::Delete => (),
-            Key::Home => self.cursor_x = 0,
-            Key::End => self.cursor_x = self.current_row_size().unwrap_or(0),
-            Key::PageUp => {
-                self.cursor_y = self.row_offset;
-                for _ in 0..self.screen_rows {
-                    self.move_cursor(ArrowKey::Up)
-                }
-            },
-            Key::PageDown => {
-                self.cursor_y = cmp::min(self.rows.len() as u16, self.row_offset + self.screen_rows - 1);
-                for _ in 0..self.screen_rows {
-                    self.move_cursor(ArrowKey::Down)
-                }
-            },
+            Key::Control('Q') => Self::exit(),
+            Key::Control(_)   => (),
+            Key::Arrow(a)     => self.move_cursor(a),
+            Key::Backspace    => (),
+            Key::Delete       => (),
+            Key::Home         => self.cursor_x = 0,
+            Key::End          => self.cursor_x = self.current_row_size().unwrap_or(0),
+            Key::PageUp       => self.page_up(),
+            Key::PageDown     => self.page_down(),
+        }
+    }
+
+    fn exit() {
+        let _ = io::stdout().write(b"\x1b[2J");
+        let _ = io::stdout().write(b"\x1b[H");
+        let _ = io::stdout().flush();
+        process::exit(0)
+    }
+
+    fn page_up(&mut self) {
+        self.cursor_y = self.row_offset;
+        for _ in 0..self.screen_rows {
+            self.move_cursor(ArrowKey::Up)
+        }
+    }
+
+    fn page_down(&mut self) {
+        self.cursor_y = cmp::min(self.rows.len() as u16, self.row_offset + self.screen_rows - 1);
+        for _ in 0..self.screen_rows {
+            self.move_cursor(ArrowKey::Down)
         }
     }
 }
