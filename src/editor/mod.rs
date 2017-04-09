@@ -46,6 +46,18 @@ impl Editor {
         }
     }
 
+    pub fn insert_char(&mut self, c: char) {
+        if self.cursor_past_end() {
+            self.rows.push(Row::new());
+        }
+        let cursor_x = self.cursor_x as usize;
+        {
+            let mut current_row = self.current_row_mut().unwrap();
+            current_row.insert_char(cursor_x, c);
+        }
+        self.cursor_x += 1;
+    }
+
     pub fn open_file(&mut self, filename: &str) {
         self.filename = filename.to_string();
         let f = File::open(filename).unwrap(); // TODO: Handle error
@@ -165,11 +177,23 @@ impl Editor {
         Key::from_bytes(&bytes)
     }
 
+    fn cursor_past_end(&self) -> bool {
+        self.cursor_y as usize >= self.rows.len()
+    }
+
     fn current_row(&self) -> Option<&Row> {
-        if self.cursor_y as usize >= self.rows.len() {
+        if self.cursor_past_end() {
             None
         } else {
             Some(&self.rows[self.cursor_y as usize])
+        }
+    }
+
+    fn current_row_mut(&mut self) -> Option<&mut Row> {
+        if self.cursor_past_end() {
+            None
+        } else {
+            Some(&mut self.rows[self.cursor_y as usize])
         }
     }
 
@@ -223,6 +247,8 @@ impl Editor {
                     let _ = io::stdout().write(b"\x1b[H");
                     let _ = io::stdout().flush();
                     process::exit(0)
+                } else {
+                    self.insert_char(c as char);
                 }
             },
             Key::Arrow(a) => self.move_cursor(a),

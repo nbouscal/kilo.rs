@@ -8,11 +8,20 @@ pub struct Row {
 }
 
 impl Row {
+    pub fn new() -> Self {
+        Row { contents: String::new(), render: String::new() }
+    }
+
     pub fn from_string(s: String) -> Self {
         Row {
             contents: s.clone(),
             render: Self::render_string(s),
         }
+    }
+
+    pub fn insert_char(&mut self, at: usize, c: char) {
+        self.contents.insert(at, c);
+        self.render = Self::render_string(self.contents.clone())
     }
 
     pub fn rendered_cursor_x(&self, cursor_x: u16) -> u16 {
