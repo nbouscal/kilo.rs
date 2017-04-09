@@ -71,7 +71,7 @@ impl Editor {
             cursor_y: 0,
             row_offset: 0,
             col_offset: 0,
-            screen_rows: rows,
+            screen_rows: rows - 1, // Leave one row for status bar
             screen_cols: cols,
             write_buffer: String::new(),
             rows: Vec::new(),
@@ -96,6 +96,7 @@ impl Editor {
         self.write_buffer.push_str("\x1b[?25l");
         self.write_buffer.push_str("\x1b[H");
         self.draw_rows();
+        self.draw_status_bar();
         let cursor_y = self.cursor_y - self.row_offset + 1;
         let cursor_x = self.rendered_cursor_x() - self.col_offset + 1;
         let set_cursor = format!("\x1b[{};{}H", cursor_y, cursor_x);
@@ -157,10 +158,14 @@ impl Editor {
             }
 
             self.write_buffer.push_str("\x1b[K");
-            if i < self.screen_rows - 1 {
-                self.write_buffer.push_str("\r\n");
-            }
+            self.write_buffer.push_str("\r\n");
         }
+    }
+
+    fn draw_status_bar(&mut self) {
+        self.write_buffer.push_str("\x1b[7m");
+        self.write_buffer.push_str(&" ".repeat(self.screen_cols as usize));
+        self.write_buffer.push_str("\x1b[m");
     }
 
     fn ctrl_key(key: u8) -> u8 { key & 0x1f }
