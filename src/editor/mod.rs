@@ -253,6 +253,7 @@ impl Editor {
             },
             Key::Control(_) => (),
             Key::Arrow(a) => self.move_cursor(a),
+            Key::Backspace => (),
             Key::Delete => (),
             Key::Home => self.cursor_x = 0,
             Key::End => self.cursor_x = self.current_row_size().unwrap_or(0),

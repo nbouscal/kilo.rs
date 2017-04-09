@@ -2,6 +2,7 @@ pub enum Key {
     Character(char),
     Control(char),
     Arrow(ArrowKey),
+    Backspace,
     Delete,
     Home,
     End,
@@ -21,6 +22,7 @@ impl Key {
         match bytes[0] {
             0       => None,
             b'\x1b' => Self::from_escape_sequence(&bytes[1..]),
+            8 | 127 => Some(Key::Backspace),
             1...31  => Some(Key::Control((bytes[0] | 0x40) as char)),
             _       => Some(Key::Character(bytes[0] as char))
         }
