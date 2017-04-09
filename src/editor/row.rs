@@ -24,6 +24,12 @@ impl Row {
         self.render = Self::render_string(self.contents.clone())
     }
 
+    pub fn delete_char(&mut self, at: usize) {
+        if at >= self.contents.len() { return }
+        self.contents.remove(at);
+        self.render = Self::render_string(self.contents.clone());
+    }
+
     pub fn rendered_cursor_x(&self, cursor_x: u16) -> u16 {
         self.contents.chars()
             .take(cursor_x as usize)

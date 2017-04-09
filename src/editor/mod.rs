@@ -65,6 +65,18 @@ impl Editor {
         self.dirty = true;
     }
 
+    pub fn delete_char(&mut self) {
+        let cursor_x = self.cursor_x as usize;
+        {
+            let current_row = self.current_row_mut();
+            if current_row.is_none() { return };
+            if cursor_x == 0 { return };
+            current_row.unwrap().delete_char(cursor_x - 1);
+        }
+        self.cursor_x -= 1;
+        self.dirty = true;
+    }
+
     fn rows_to_string(&self) -> String {
         self.rows.iter()
             .map(|row| row.contents.clone())
@@ -278,8 +290,11 @@ impl Editor {
             Key::Control(_)   => (),
             Key::Arrow(a)     => self.move_cursor(a),
             Key::Escape       => (),
-            Key::Backspace    => (),
-            Key::Delete       => (),
+            Key::Backspace    => self.delete_char(),
+            Key::Delete       => {
+                self.move_cursor(ArrowKey::Right);
+                self.delete_char();
+            },
             Key::Home         => self.cursor_x = 0,
             Key::End          => self.cursor_x = self.current_row_size().unwrap_or(0),
             Key::PageUp       => self.page_up(),
