@@ -16,20 +16,21 @@ pub enum ArrowKey {
 }
 
 impl Key {
-    pub fn from_bytes(bytes: &[u8]) -> Self {
-        let default = Key::Character(bytes[0]);
+    pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        if bytes[0] == 0 { return None }
+        let default = Some(Key::Character(bytes[0]));
         if bytes[0] == b'\x1b' {
             if bytes[1] == b'[' {
                 if bytes[2] >= b'0' && bytes[2] <= b'9' {
                     if bytes[3] == b'~' {
                         match bytes[2] {
-                            b'1' => Key::Home,
-                            b'3' => Key::Delete,
-                            b'4' => Key::End,
-                            b'5' => Key::PageUp,
-                            b'6' => Key::PageDown,
-                            b'7' => Key::Home,
-                            b'8' => Key::End,
+                            b'1' => Some(Key::Home),
+                            b'3' => Some(Key::Delete),
+                            b'4' => Some(Key::End),
+                            b'5' => Some(Key::PageUp),
+                            b'6' => Some(Key::PageDown),
+                            b'7' => Some(Key::Home),
+                            b'8' => Some(Key::End),
                             _    => default,
                         }
                     } else {
@@ -37,19 +38,19 @@ impl Key {
                     }
                 } else {
                     match bytes[2] {
-                        b'A' => Key::Arrow(ArrowKey::Up),
-                        b'B' => Key::Arrow(ArrowKey::Down),
-                        b'C' => Key::Arrow(ArrowKey::Right),
-                        b'D' => Key::Arrow(ArrowKey::Left),
-                        b'H' => Key::Home,
-                        b'F' => Key::End,
+                        b'A' => Some(Key::Arrow(ArrowKey::Up)),
+                        b'B' => Some(Key::Arrow(ArrowKey::Down)),
+                        b'C' => Some(Key::Arrow(ArrowKey::Right)),
+                        b'D' => Some(Key::Arrow(ArrowKey::Left)),
+                        b'H' => Some(Key::Home),
+                        b'F' => Some(Key::End),
                         _    => default,
                     }
                 }
             } else if bytes[1] == b'O' {
                 match bytes[2] {
-                    b'H' => Key::Home,
-                    b'F' => Key::End,
+                    b'H' => Some(Key::Home),
+                    b'F' => Some(Key::End),
                     _    => default,
                 }
             } else {

@@ -171,7 +171,7 @@ impl Editor {
         }
     }
 
-    fn read_key() -> Key {
+    fn read_key() -> Option<Key> {
         let mut bytes = [0; 4];
         let _ = io::stdin().read(&mut bytes);
         Key::from_bytes(&bytes)
@@ -240,7 +240,9 @@ impl Editor {
     }
 
     pub fn process_keypress(&mut self) {
-        match Self::read_key() {
+        let key = Self::read_key();
+        if key.is_none() { return }
+        match key.unwrap() {
             Key::Character(c) => {
                 if c == util::ctrl_key(b'q') {
                     let _ = io::stdout().write(b"\x1b[2J");
