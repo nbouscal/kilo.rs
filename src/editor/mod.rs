@@ -248,6 +248,7 @@ impl Editor {
             Key::Control('Q') => Self::exit(),
             Key::Control(_)   => (),
             Key::Arrow(a)     => self.move_cursor(a),
+            Key::Escape       => (),
             Key::Backspace    => (),
             Key::Delete       => (),
             Key::Home         => self.cursor_x = 0,

@@ -2,6 +2,7 @@ pub enum Key {
     Character(char),
     Control(char),
     Arrow(ArrowKey),
+    Escape,
     Backspace,
     Delete,
     Home,
@@ -39,7 +40,7 @@ impl Key {
             b"[4~" | b"[8~" | b"[F" | b"OF" => Key::End,
             b"[5~" => Key::PageUp,
             b"[6~" => Key::PageDown,
-            _      => Key::Character('\x1b'),
+            _      => Key::Escape,
         }
     }
 }
