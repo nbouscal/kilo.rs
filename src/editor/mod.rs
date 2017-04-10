@@ -65,6 +65,21 @@ impl Editor {
         self.dirty = true;
     }
 
+    pub fn insert_newline(&mut self) {
+        if self.cursor_x == 0 {
+            let cursor_y = self.cursor_y as usize;
+            self.insert_row(cursor_y, String::new());
+        } else {
+            let cursor_x = self.cursor_x as usize;
+            let remainder = self.current_row_mut().unwrap().split_off(cursor_x);
+            let cursor_y = self.cursor_y as usize;
+            self.insert_row(cursor_y + 1, remainder);
+        }
+        self.cursor_y += 1;
+        self.cursor_x = 0;
+        self.dirty = true;
+    }
+
     pub fn delete_char(&mut self) {
         if self.cursor_past_end() { return };
         if self.cursor_x == 0 && self.cursor_y == 0 { return };
@@ -82,6 +97,12 @@ impl Editor {
             self.cursor_x -= 1;
         }
         self.dirty = true;
+    }
+
+    fn insert_row(&mut self, at: usize, s: String) {
+        if at <= self.rows.len() {
+            self.rows.insert(at, Row::from_string(s));
+        };
     }
 
     fn delete_row(&mut self, at: usize) {
@@ -294,6 +315,7 @@ impl Editor {
         if key.is_none() { return }
         match key.unwrap() {
             Key::Character(c) => self.insert_char(c),
+            Key::Control('M') => self.insert_newline(),
             Key::Control('S') => self.save_file(),
             Key::Control('Q') => {
                 self.exit();

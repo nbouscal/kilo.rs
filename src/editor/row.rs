@@ -1,3 +1,5 @@
+use util;
+
 use std::iter;
 
 const KILO_TAB_STOP: usize = 8;
@@ -33,6 +35,12 @@ impl Row {
     pub fn append_string(&mut self, s: &str) {
         self.contents.push_str(s);
         self.update_render();
+    }
+
+    pub fn split_off(&mut self, at: usize) -> String {
+        let remainder = util::safe_split_off(&mut self.contents, at);
+        self.update_render();
+        remainder
     }
 
     pub fn rendered_cursor_x(&self, cursor_x: u16) -> u16 {
