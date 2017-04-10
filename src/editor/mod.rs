@@ -128,7 +128,15 @@ impl Editor {
     }
 
     pub fn save_file(&mut self) {
-        if self.filename.is_empty() { return }
+        if self.filename.is_empty() {
+            match self.prompt("Save as: ") {
+                Some(name) => self.filename = name,
+                None => {
+                    self.set_status_message("Save aborted");
+                    return;
+                },
+            }
+        }
         let mut f = File::create(&self.filename).unwrap(); // TODO: Handle error
         let bytes = f.write(&self.rows_to_string().as_bytes()).unwrap();
         self.set_status_message(&format!("{} bytes written to disk", bytes));
@@ -270,6 +278,24 @@ impl Editor {
 
     fn current_row_size(&self) -> Option<u16> {
         self.current_row().map(|row| row.contents.len() as u16)
+    }
+
+    fn prompt(&mut self, prompt: &str) -> Option<String> {
+        let mut buffer = String::new();
+        loop {
+            self.set_status_message(&format!("{} {}", prompt, buffer));
+            self.refresh_screen();
+            let key = Self::read_key();
+            if key.is_none() { continue }
+            match key.unwrap() {
+                Key::Character(c) => buffer.push(c),
+                Key::Control('M') => if buffer.len() > 0 { break },
+                Key::Escape       => return None,
+                Key::Backspace    => { buffer.pop(); },
+                _ => ()
+            }
+        }
+        Some(buffer)
     }
 
     fn move_cursor(&mut self, key: ArrowKey) {
