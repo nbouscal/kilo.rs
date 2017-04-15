@@ -129,7 +129,7 @@ impl Editor {
 
     pub fn save_file(&mut self) {
         if self.filename.is_empty() {
-            match self.prompt(&|buf| format!("Save as: {}", buf)) {
+            match self.prompt(&|buf| format!("Save as: {}", buf), &|_, _, _|()) {
                 Some(name) => self.filename = name,
                 None => {
                     self.set_status_message("Save aborted");
@@ -144,22 +144,25 @@ impl Editor {
     }
 
     pub fn find(&mut self) {
-        match self.prompt(&|buf| format!("Search: {} (ESC to cancel)", buf)) {
-            Some(query) => {
-                let res = self.rows.iter().enumerate()
-                    .find(|&(_, row)| row.render.contains(&query)); // TODO: Find a way to only have to search once
-                match res {
-                    Some((y, row)) => {
-                        match row.render.find(&query) {
-                            Some(x) => {
-                                self.cursor_y = y as u16;
-                                self.cursor_x = row.raw_cursor_x(x as u16);
-                                self.row_offset = self.rows.len() as u16;
-                            },
-                            None => return, // TODO: Figure out how to get rid of these dumb None => returns
-                        }
+        self.prompt(&|buf| format!("Search: {} (ESC to cancel)", buf), &Self::find_callback);
+    }
+
+    fn find_callback(&mut self, query: &str, key: Key) {
+        match key {
+            Key::Control('M') | Key::Escape => return,
+            _ => (),
+        }
+        let res = self.rows.iter().enumerate()
+            .find(|&(_, row)| row.render.contains(&query)); // TODO: Find a way to only have to search once
+        match res {
+            Some((y, row)) => {
+                match row.render.find(&query) {
+                    Some(x) => {
+                        self.cursor_y = y as u16;
+                        self.cursor_x = row.raw_cursor_x(x as u16);
+                        self.row_offset = self.rows.len() as u16;
                     },
-                    None => return,
+                    None => return, // TODO: Figure out how to get rid of these dumb None => returns
                 }
             },
             None => return,
@@ -303,20 +306,31 @@ impl Editor {
         self.current_row().map(|row| row.contents.len() as u16)
     }
 
-    fn prompt(&mut self, prompt: (&Fn(&str) -> String)) -> Option<String> {
+    fn prompt(&mut self, prompt: (&Fn(&str) -> String),
+              callback: (&Fn(&mut Self, &str, Key))) -> Option<String> {
         let mut buffer = String::new();
         loop {
             self.set_status_message(&prompt(&buffer));
             self.refresh_screen();
             let key = Self::read_key();
             if key.is_none() { continue }
-            match key.unwrap() {
+            let key = key.unwrap();
+            match key {
                 Key::Character(c) => buffer.push(c),
-                Key::Control('M') => if buffer.len() > 0 { break },
-                Key::Escape       => return None,
+                Key::Control('M') => {
+                    if buffer.len() > 0 {
+                        callback(self, &buffer, key);
+                        break
+                    }
+                },
+                Key::Escape       => {
+                    callback(self, &buffer, key);
+                    return None
+                },
                 Key::Backspace    => { buffer.pop(); },
                 _ => ()
             }
+            callback(self, &buffer, key);
         }
         Some(buffer)
     }
