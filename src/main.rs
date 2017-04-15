@@ -16,7 +16,7 @@ fn main() {
         editor.open_file(&filename);
     }
 
-    editor.set_status_message("HELP: Ctrl-S = save | Ctrl-Q = quit");
+    editor.set_status_message("HELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find");
 
     loop {
         editor.refresh_screen();

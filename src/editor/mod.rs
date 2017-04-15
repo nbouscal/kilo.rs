@@ -143,6 +143,29 @@ impl Editor {
         self.dirty = false;
     }
 
+    pub fn find(&mut self) {
+        match self.prompt(&|buf| format!("Search: {} (ESC to cancel)", buf)) {
+            Some(query) => {
+                let res = self.rows.iter().enumerate()
+                    .find(|&(_, row)| row.render.contains(&query)); // TODO: Find a way to only have to search once
+                match res {
+                    Some((y, row)) => {
+                        match row.render.find(&query) {
+                            Some(x) => {
+                                self.cursor_y = y as u16;
+                                self.cursor_x = row.raw_cursor_x(x as u16);
+                                self.row_offset = self.rows.len() as u16;
+                            },
+                            None => return, // TODO: Figure out how to get rid of these dumb None => returns
+                        }
+                    },
+                    None => return,
+                }
+            },
+            None => return,
+        }
+    }
+
     fn rendered_cursor_x(&self) -> u16 {
         self.current_row()
             .map_or(0, |row| row.rendered_cursor_x(self.cursor_x))
@@ -341,6 +364,7 @@ impl Editor {
         if key.is_none() { return }
         match key.unwrap() {
             Key::Character(c) => self.insert_char(c),
+            Key::Control('F') => self.find(),
             Key::Control('M') => self.insert_newline(),
             Key::Control('S') => self.save_file(),
             Key::Control('Q') => {

@@ -55,6 +55,18 @@ impl Row {
         })
     }
 
+    pub fn raw_cursor_x(&self, rendered_x: u16) -> u16 {
+        self.contents.chars()
+            .scan(0, |acc, c| {
+                if c == '\t' {
+                    *acc = *acc + KILO_TAB_STOP as u16 - (*acc % KILO_TAB_STOP as u16)
+                } else {
+                    *acc += 1
+                };
+                Some(*acc)
+            }).position(|rx| rx > rendered_x).unwrap() as u16
+    }
+
     fn update_render(&mut self) {
         self.render = Self::render_string(self.contents.clone());
     }
