@@ -129,7 +129,7 @@ impl Editor {
 
     pub fn save_file(&mut self) {
         if self.filename.is_empty() {
-            match self.prompt("Save as: ") {
+            match self.prompt(&|buf| format!("Save as: {}", buf)) {
                 Some(name) => self.filename = name,
                 None => {
                     self.set_status_message("Save aborted");
@@ -280,10 +280,10 @@ impl Editor {
         self.current_row().map(|row| row.contents.len() as u16)
     }
 
-    fn prompt(&mut self, prompt: &str) -> Option<String> {
+    fn prompt(&mut self, prompt: (&Fn(&str) -> String)) -> Option<String> {
         let mut buffer = String::new();
         loop {
-            self.set_status_message(&format!("{} {}", prompt, buffer));
+            self.set_status_message(&prompt(&buffer));
             self.refresh_screen();
             let key = Self::read_key();
             if key.is_none() { continue }
