@@ -144,7 +144,19 @@ impl Editor {
     }
 
     pub fn find(&mut self) {
-        self.prompt(&|buf| format!("Search: {} (ESC to cancel)", buf), &Self::find_callback);
+        let saved_cursor_x = self.cursor_x;
+        let saved_cursor_y = self.cursor_y;
+        let saved_col_offset = self.col_offset;
+        let saved_row_offset = self.row_offset;
+
+        let query = self.prompt(&|buf| format!("Search: {} (ESC to cancel)", buf),
+                                &Self::find_callback);
+        if query.is_none() {
+            self.cursor_x = saved_cursor_x;
+            self.cursor_y = saved_cursor_y;
+            self.col_offset = saved_col_offset;
+            self.row_offset = saved_row_offset;
+        }
     }
 
     fn find_callback(&mut self, query: &str, key: Key) {
