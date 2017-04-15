@@ -1,8 +1,10 @@
 mod key;
 mod row;
+mod search_state;
 
 use self::key::{Key, ArrowKey};
 use self::row::Row;
+use self::search_state::{Direction, SearchState};
 use terminal;
 use util;
 
@@ -30,26 +32,6 @@ pub struct Editor {
     status_msg: String,
     status_time: SystemTime,
     search_state: SearchState,
-}
-
-#[derive(PartialEq, Eq, Clone, Copy)]
-enum Direction {
-    Forward,
-    Backward,
-}
-
-struct SearchState {
-    last_match: Option<u16>,
-    direction: Direction,
-}
-
-impl SearchState {
-    pub fn new() -> Self {
-        SearchState {
-            last_match: None,
-            direction: Direction::Forward,
-        }
-    }
 }
 
 impl Editor {
