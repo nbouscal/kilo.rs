@@ -29,6 +29,27 @@ pub struct Editor {
     filename: String,
     status_msg: String,
     status_time: SystemTime,
+    search_state: SearchState,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+enum Direction {
+    Forward,
+    Backward,
+}
+
+struct SearchState {
+    last_match: Option<u16>,
+    direction: Direction,
+}
+
+impl SearchState {
+    pub fn new() -> Self {
+        SearchState {
+            last_match: None,
+            direction: Direction::Forward,
+        }
+    }
 }
 
 impl Editor {
@@ -49,6 +70,7 @@ impl Editor {
             filename: String::new(),
             status_msg: String::new(),
             status_time: SystemTime::now(),
+            search_state: SearchState::new(),
         }
     }
 
@@ -148,8 +170,9 @@ impl Editor {
         let saved_cursor_y = self.cursor_y;
         let saved_col_offset = self.col_offset;
         let saved_row_offset = self.row_offset;
+        self.search_state = SearchState::new();
 
-        let query = self.prompt(&|buf| format!("Search: {} (ESC to cancel)", buf),
+        let query = self.prompt(&|buf| format!("Search: {} (Use ESC/Arrows/Enter)", buf),
                                 &Self::find_callback);
         if query.is_none() {
             self.cursor_x = saved_cursor_x;
@@ -157,19 +180,51 @@ impl Editor {
             self.col_offset = saved_col_offset;
             self.row_offset = saved_row_offset;
         }
+        self.search_state = SearchState::new();
     }
 
     fn find_callback(&mut self, query: &str, key: Key) {
+        let mut current = self.search_state.last_match.unwrap_or(0);
+
         match key {
             Key::Control('M') | Key::Escape => return,
+            Key::Arrow(ak) => {
+                match ak {
+                    ArrowKey::Left | ArrowKey::Up => {
+                        current -= 1;
+                        self.search_state.direction = Direction::Backward;
+                    },
+                    ArrowKey::Right | ArrowKey::Down => {
+                        current += 1;
+                        self.search_state.direction = Direction::Forward;
+                    },
+                };
+            },
             _ => (),
         }
-        let res = self.rows.iter().enumerate()
-            .find(|&(_, row)| row.render.contains(&query)); // TODO: Find a way to only have to search once
+
+        if query.is_empty() { return }
+
+        let num_rows = self.rows.len();
+
+        // TODO: Find a way to only have to search the row once
+        let res = match self.search_state.direction {
+            Direction::Forward => {
+                self.rows.iter().enumerate()
+                    .cycle().skip(current as usize).take(num_rows)
+                    .find(|&(_, row)| row.render.contains(&query))
+            },
+            Direction::Backward => {
+                self.rows.iter().enumerate().rev()
+                    .cycle().skip(num_rows - current as usize - 1).take(num_rows)
+                    .find(|&(_, row)| row.render.contains(&query))
+            },
+        };
         match res {
             Some((y, row)) => {
                 match row.render.find(&query) {
                     Some(x) => {
+                        self.search_state.last_match = Some(y as u16);
                         self.cursor_y = y as u16;
                         self.cursor_x = row.raw_cursor_x(x as u16);
                         self.row_offset = self.rows.len() as u16;
