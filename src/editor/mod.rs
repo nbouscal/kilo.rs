@@ -21,8 +21,8 @@ const KILO_QUIT_TIMES: u8 = 3;
 
 pub struct Editor {
     cursor: Cursor,
-    row_offset: u16,
-    col_offset: u16,
+    row_offset: usize,
+    col_offset: usize,
     screen_rows: u16,
     screen_cols: u16,
     write_buffer: String,
@@ -203,7 +203,7 @@ impl Editor {
             Some(cursor) => {
                 self.search_state.last_match = Some(cursor.y);
                 self.cursor = cursor;
-                self.row_offset = self.rows.len() as u16;
+                self.row_offset = self.rows.len();
             },
             _ => (),
         }
@@ -231,8 +231,8 @@ impl Editor {
         self.draw_rows();
         self.draw_status_bar();
         self.draw_message_bar();
-        let cursor_y = self.cursor.y as u16 - self.row_offset + 1;
-        let cursor_x = self.rendered_cursor_x() as u16 - self.col_offset + 1;
+        let cursor_y = self.cursor.y - self.row_offset + 1;
+        let cursor_x = self.rendered_cursor_x() - self.col_offset + 1;
         let set_cursor = format!("\x1b[{};{}H", cursor_y, cursor_x);
         self.write_buffer.push_str(&set_cursor);
         self.write_buffer.push_str("\x1b[?25h");
@@ -242,25 +242,24 @@ impl Editor {
     }
 
     fn scroll(&mut self) {
-        let rx = self.rendered_cursor_x() as u16;
-        let cursor_y = self.cursor.y as u16;
-        if cursor_y < self.row_offset {
-            self.row_offset = cursor_y;
-        } else if cursor_y >= self.row_offset + self.screen_rows {
-            self.row_offset = cursor_y - self.screen_rows + 1;
+        let rx = self.rendered_cursor_x();
+        if self.cursor.y < self.row_offset {
+            self.row_offset = self.cursor.y;
+        } else if self.cursor.y >= self.row_offset + (self.screen_rows as usize) {
+            self.row_offset = self.cursor.y - (self.screen_rows as usize) + 1;
         }
         if rx < self.col_offset {
             self.col_offset = rx;
-        } else if rx >= self.col_offset + self.screen_cols {
-            self.col_offset = rx - self.screen_cols + 1;
+        } else if rx >= self.col_offset + (self.screen_cols as usize) {
+            self.col_offset = rx - (self.screen_cols as usize) + 1;
         }
     }
 
     fn draw_rows(&mut self) {
-        for i in 0..self.screen_rows {
+        for i in 0..self.screen_rows as usize {
             let file_row = i + self.row_offset;
-            if file_row as usize >= self.rows.len() {
-                if self.rows.is_empty() && i == self.screen_rows / 3 {
+            if file_row >= self.rows.len() {
+                if self.rows.is_empty() && i == (self.screen_rows as usize) / 3 {
                     let mut welcome = format!("Kilo editor -- version {}", KILO_VERSION);
                     util::safe_truncate(&mut welcome, self.screen_cols as usize);
 
@@ -276,8 +275,8 @@ impl Editor {
                     self.write_buffer.push_str("~");
                 }
             } else {
-                let ref mut row = self.rows[file_row as usize].render;
-                let mut row = row.chars().skip(self.col_offset as usize).collect::<String>();
+                let ref mut row = self.rows[file_row].render;
+                let mut row = row.chars().skip(self.col_offset).collect::<String>();
                 util::safe_truncate(&mut row, self.screen_cols as usize);
                 self.write_buffer.push_str(&row);
             }
@@ -466,14 +465,14 @@ impl Editor {
     }
 
     fn page_up(&mut self) {
-        self.cursor.y = self.row_offset as usize;
+        self.cursor.y = self.row_offset;
         for _ in 0..self.screen_rows {
             self.move_cursor(ArrowKey::Up)
         }
     }
 
     fn page_down(&mut self) {
-        self.cursor.y = cmp::min(self.rows.len(), (self.row_offset + self.screen_rows - 1) as usize);
+        self.cursor.y = cmp::min(self.rows.len(), self.row_offset + (self.screen_rows as usize) - 1);
         for _ in 0..self.screen_rows {
             self.move_cursor(ArrowKey::Down)
         }
