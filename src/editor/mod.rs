@@ -189,33 +189,37 @@ impl Editor {
 
         let num_rows = self.rows.len();
 
-        // TODO: Find a way to only have to search the row once
         let res = match self.search_state.direction {
             Direction::Forward => {
-                self.rows.iter().enumerate()
-                    .cycle().skip(current as usize).take(num_rows)
-                    .find(|&(_, row)| row.render.contains(&query))
+                let iter = self.rows.iter().enumerate()
+                    .cycle().skip(current as usize).take(num_rows);
+                Self::find_in_rows(iter, query)
             },
             Direction::Backward => {
-                self.rows.iter().enumerate().rev()
-                    .cycle().skip(num_rows - current as usize - 1).take(num_rows)
-                    .find(|&(_, row)| row.render.contains(&query))
+                let iter = self.rows.iter().enumerate().rev()
+                    .cycle().skip(num_rows - current as usize - 1).take(num_rows);
+                Self::find_in_rows(iter, query)
             },
         };
         match res {
-            Some((y, row)) => {
-                match row.render.find(&query) {
-                    Some(x) => {
-                        self.search_state.last_match = Some(y as u16);
-                        self.cursor_y = y as u16;
-                        self.cursor_x = row.raw_cursor_x(x as u16);
-                        self.row_offset = self.rows.len() as u16;
-                    },
-                    None => return, // TODO: Figure out how to get rid of these dumb None => returns
-                }
+            Some((x, y)) => {
+                self.search_state.last_match = Some(y);
+                self.cursor_y = y;
+                self.cursor_x = x;
+                self.row_offset = self.rows.len() as u16;
             },
-            None => return,
+            _ => (),
         }
+    }
+
+    fn find_in_rows<'a, T: Iterator<Item=(usize, &'a Row)>>(iter: T, query: &str) -> Option<(u16, u16)> {
+        let res = iter.map(|(y, ref row)| {
+            let x = row.render.find(&query)
+                .map(|x| row.raw_cursor_x(x as u16));
+            (x, y as u16)
+        })
+        .find(|&(option_x, _)| option_x.is_some());
+        res.map(|(option_x, y)| { (option_x.unwrap(), y) })
     }
 
     fn rendered_cursor_x(&self) -> u16 {
