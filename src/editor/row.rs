@@ -43,28 +43,28 @@ impl Row {
         remainder
     }
 
-    pub fn rendered_cursor_x(&self, cursor_x: u16) -> u16 {
+    pub fn rendered_cursor_x(&self, cursor_x: usize) -> usize {
         self.contents.chars()
-            .take(cursor_x as usize)
+            .take(cursor_x)
             .fold(0, |acc, c| {
                 if c == '\t' {
-                    acc + KILO_TAB_STOP as u16 - (acc % KILO_TAB_STOP as u16)
+                    acc + KILO_TAB_STOP - (acc % KILO_TAB_STOP)
                 } else {
                     acc + 1
                 }
         })
     }
 
-    pub fn raw_cursor_x(&self, rendered_x: u16) -> u16 {
+    pub fn raw_cursor_x(&self, rendered_x: usize) -> usize {
         self.contents.chars()
             .scan(0, |acc, c| {
                 if c == '\t' {
-                    *acc = *acc + KILO_TAB_STOP as u16 - (*acc % KILO_TAB_STOP as u16)
+                    *acc = *acc + KILO_TAB_STOP - (*acc % KILO_TAB_STOP)
                 } else {
                     *acc += 1
                 };
                 Some(*acc)
-            }).position(|rx| rx > rendered_x).unwrap() as u16
+            }).position(|rx| rx > rendered_x).unwrap()
     }
 
     fn update_render(&mut self) {

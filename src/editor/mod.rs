@@ -1,7 +1,9 @@
+mod cursor;
 mod key;
 mod row;
 mod search_state;
 
+use self::cursor::Cursor;
 use self::key::{Key, ArrowKey};
 use self::row::Row;
 use self::search_state::{Direction, SearchState};
@@ -18,8 +20,7 @@ const KILO_VERSION: &'static str = "0.0.1";
 const KILO_QUIT_TIMES: u8 = 3;
 
 pub struct Editor {
-    cursor_x: u16,
-    cursor_y: u16,
+    cursor: Cursor,
     row_offset: u16,
     col_offset: u16,
     screen_rows: u16,
@@ -39,8 +40,7 @@ impl Editor {
         // TODO: Default to 24x80 if None?
         let (rows, cols) = terminal::get_window_size().unwrap();
         Editor {
-            cursor_x: 0,
-            cursor_y: 0,
+            cursor: Cursor::new(),
             row_offset: 0,
             col_offset: 0,
             screen_rows: rows - 2, // Leave space for status and message bars
@@ -60,45 +60,45 @@ impl Editor {
         if self.cursor_past_end() {
             self.rows.push(Row::new());
         }
-        let cursor_x = self.cursor_x as usize;
+        let cursor_x = self.cursor.x;
         {
             let mut current_row = self.current_row_mut().unwrap();
             current_row.insert_char(cursor_x, c);
         }
-        self.cursor_x += 1;
+        self.cursor.x += 1;
         self.dirty = true;
     }
 
     pub fn insert_newline(&mut self) {
-        if self.cursor_x == 0 {
-            let cursor_y = self.cursor_y as usize;
+        if self.cursor.x == 0 {
+            let cursor_y = self.cursor.y;
             self.insert_row(cursor_y, String::new());
         } else {
-            let cursor_x = self.cursor_x as usize;
+            let cursor_x = self.cursor.x;
             let remainder = self.current_row_mut().unwrap().split_off(cursor_x);
-            let cursor_y = self.cursor_y as usize;
+            let cursor_y = self.cursor.y;
             self.insert_row(cursor_y + 1, remainder);
         }
-        self.cursor_y += 1;
-        self.cursor_x = 0;
+        self.cursor.y += 1;
+        self.cursor.x = 0;
         self.dirty = true;
     }
 
     pub fn delete_char(&mut self) {
         if self.cursor_past_end() { return };
-        if self.cursor_x == 0 && self.cursor_y == 0 { return };
-        let cursor_x = self.cursor_x as usize;
+        if self.cursor.x == 0 && self.cursor.y == 0 { return };
+        let cursor_x = self.cursor.x;
         if cursor_x == 0 {
-            let cursor_y = self.cursor_y as usize;
-            self.cursor_x = self.rows[cursor_y - 1].contents.len() as u16;
+            let cursor_y = self.cursor.y;
+            self.cursor.x = self.rows[cursor_y - 1].contents.len();
             // Is there a way to avoid this clone?
             let s = self.current_row().unwrap().contents.clone();
             self.rows[cursor_y - 1].append_string(&s);
             self.delete_row(cursor_y);
-            self.cursor_y -= 1;
+            self.cursor.y -= 1;
         } else {
             self.current_row_mut().unwrap().delete_char(cursor_x - 1);
-            self.cursor_x -= 1;
+            self.cursor.x -= 1;
         }
         self.dirty = true;
     }
@@ -148,8 +148,7 @@ impl Editor {
     }
 
     pub fn find(&mut self) {
-        let saved_cursor_x = self.cursor_x;
-        let saved_cursor_y = self.cursor_y;
+        let saved_cursor = self.cursor;
         let saved_col_offset = self.col_offset;
         let saved_row_offset = self.row_offset;
         self.search_state = SearchState::new();
@@ -157,8 +156,7 @@ impl Editor {
         let query = self.prompt(&|buf| format!("Search: {} (Use ESC/Arrows/Enter)", buf),
                                 &Self::find_callback);
         if query.is_none() {
-            self.cursor_x = saved_cursor_x;
-            self.cursor_y = saved_cursor_y;
+            self.cursor = saved_cursor;
             self.col_offset = saved_col_offset;
             self.row_offset = saved_row_offset;
         }
@@ -192,39 +190,38 @@ impl Editor {
         let res = match self.search_state.direction {
             Direction::Forward => {
                 let iter = self.rows.iter().enumerate()
-                    .cycle().skip(current as usize).take(num_rows);
+                    .cycle().skip(current).take(num_rows);
                 Self::find_in_rows(iter, query)
             },
             Direction::Backward => {
                 let iter = self.rows.iter().enumerate().rev()
-                    .cycle().skip(num_rows - current as usize - 1).take(num_rows);
+                    .cycle().skip(num_rows - current - 1).take(num_rows);
                 Self::find_in_rows(iter, query)
             },
         };
         match res {
-            Some((x, y)) => {
-                self.search_state.last_match = Some(y);
-                self.cursor_y = y;
-                self.cursor_x = x;
+            Some(cursor) => {
+                self.search_state.last_match = Some(cursor.y);
+                self.cursor = cursor;
                 self.row_offset = self.rows.len() as u16;
             },
             _ => (),
         }
     }
 
-    fn find_in_rows<'a, T: Iterator<Item=(usize, &'a Row)>>(iter: T, query: &str) -> Option<(u16, u16)> {
+    fn find_in_rows<'a, T: Iterator<Item=(usize, &'a Row)>>(iter: T, query: &str) -> Option<Cursor> {
         let res = iter.map(|(y, ref row)| {
             let x = row.render.find(&query)
-                .map(|x| row.raw_cursor_x(x as u16));
-            (x, y as u16)
+                .map(|x| row.raw_cursor_x(x));
+            (x, y)
         })
         .find(|&(option_x, _)| option_x.is_some());
-        res.map(|(option_x, y)| { (option_x.unwrap(), y) })
+        res.map(|(option_x, y)| Cursor { x: option_x.unwrap(), y: y })
     }
 
-    fn rendered_cursor_x(&self) -> u16 {
+    fn rendered_cursor_x(&self) -> usize {
         self.current_row()
-            .map_or(0, |row| row.rendered_cursor_x(self.cursor_x))
+            .map_or(0, |row| row.rendered_cursor_x(self.cursor.x))
     }
 
     pub fn refresh_screen(&mut self) {
@@ -234,8 +231,8 @@ impl Editor {
         self.draw_rows();
         self.draw_status_bar();
         self.draw_message_bar();
-        let cursor_y = self.cursor_y - self.row_offset + 1;
-        let cursor_x = self.rendered_cursor_x() - self.col_offset + 1;
+        let cursor_y = self.cursor.y as u16 - self.row_offset + 1;
+        let cursor_x = self.rendered_cursor_x() as u16 - self.col_offset + 1;
         let set_cursor = format!("\x1b[{};{}H", cursor_y, cursor_x);
         self.write_buffer.push_str(&set_cursor);
         self.write_buffer.push_str("\x1b[?25h");
@@ -245,11 +242,12 @@ impl Editor {
     }
 
     fn scroll(&mut self) {
-        let rx = self.rendered_cursor_x();
-        if self.cursor_y < self.row_offset {
-            self.row_offset = self.cursor_y;
-        } else if self.cursor_y >= self.row_offset + self.screen_rows {
-            self.row_offset = self.cursor_y - self.screen_rows + 1;
+        let rx = self.rendered_cursor_x() as u16;
+        let cursor_y = self.cursor.y as u16;
+        if cursor_y < self.row_offset {
+            self.row_offset = cursor_y;
+        } else if cursor_y >= self.row_offset + self.screen_rows {
+            self.row_offset = cursor_y - self.screen_rows + 1;
         }
         if rx < self.col_offset {
             self.col_offset = rx;
@@ -300,7 +298,7 @@ impl Editor {
         }
         let modified = if self.dirty { "(modified)" } else { "" };
         let mut status = format!("{} - {} lines {}", filename, self.rows.len(), modified);
-        let rstatus = format!("{}/{}", self.cursor_y + 1, self.rows.len());
+        let rstatus = format!("{}/{}", self.cursor.y + 1, self.rows.len());
         if self.screen_cols as usize > status.len() + rstatus.len() {
             let padding = self.screen_cols as usize - status.len() - rstatus.len();
             status.push_str(&" ".repeat(padding));
@@ -336,14 +334,14 @@ impl Editor {
     }
 
     fn cursor_past_end(&self) -> bool {
-        self.cursor_y as usize >= self.rows.len()
+        self.cursor.y >= self.rows.len()
     }
 
     fn current_row(&self) -> Option<&Row> {
         if self.cursor_past_end() {
             None
         } else {
-            Some(&self.rows[self.cursor_y as usize])
+            Some(&self.rows[self.cursor.y])
         }
     }
 
@@ -351,12 +349,12 @@ impl Editor {
         if self.cursor_past_end() {
             None
         } else {
-            Some(&mut self.rows[self.cursor_y as usize])
+            Some(&mut self.rows[self.cursor.y])
         }
     }
 
-    fn current_row_size(&self) -> Option<u16> {
-        self.current_row().map(|row| row.contents.len() as u16)
+    fn current_row_size(&self) -> Option<usize> {
+        self.current_row().map(|row| row.contents.len())
     }
 
     fn prompt(&mut self, prompt: (&Fn(&str) -> String),
@@ -391,38 +389,38 @@ impl Editor {
     fn move_cursor(&mut self, key: ArrowKey) {
         match key {
             ArrowKey::Left  => {
-                if self.cursor_x > 0 {
-                    self.cursor_x -= 1
-                } else if self.cursor_y > 0 {
-                    self.cursor_y -= 1;
-                    self.cursor_x = self.current_row_size().unwrap();
+                if self.cursor.x > 0 {
+                    self.cursor.x -= 1
+                } else if self.cursor.y > 0 {
+                    self.cursor.y -= 1;
+                    self.cursor.x = self.current_row_size().unwrap();
                 }
             },
             ArrowKey::Right => {
                 match self.current_row_size() {
                     Some(current_row_size) => {
-                        if self.cursor_x < current_row_size {
-                            self.cursor_x += 1
-                        } else if self.cursor_x == current_row_size {
-                            self.cursor_y += 1;
-                            self.cursor_x = 0;
+                        if self.cursor.x < current_row_size {
+                            self.cursor.x += 1
+                        } else if self.cursor.x == current_row_size {
+                            self.cursor.y += 1;
+                            self.cursor.x = 0;
                         }
                     },
                     None => ()
                 }
             },
             ArrowKey::Up    => {
-                if self.cursor_y > 0 { self.cursor_y -= 1 }
+                if self.cursor.y > 0 { self.cursor.y -= 1 }
             },
             ArrowKey::Down  => {
-                if (self.cursor_y as usize) < self.rows.len() {
-                    self.cursor_y += 1
+                if self.cursor.y < self.rows.len() {
+                    self.cursor.y += 1
                 }
             },
         }
         let current_row_size = self.current_row_size().unwrap_or(0);
-        if (self.cursor_x) > current_row_size {
-            self.cursor_x = current_row_size;
+        if (self.cursor.x) > current_row_size {
+            self.cursor.x = current_row_size;
         }
     }
 
@@ -446,8 +444,8 @@ impl Editor {
                 self.move_cursor(ArrowKey::Right);
                 self.delete_char();
             },
-            Key::Home         => self.cursor_x = 0,
-            Key::End          => self.cursor_x = self.current_row_size().unwrap_or(0),
+            Key::Home         => self.cursor.x = 0,
+            Key::End          => self.cursor.x = self.current_row_size().unwrap_or(0),
             Key::PageUp       => self.page_up(),
             Key::PageDown     => self.page_down(),
         }
@@ -468,14 +466,14 @@ impl Editor {
     }
 
     fn page_up(&mut self) {
-        self.cursor_y = self.row_offset;
+        self.cursor.y = self.row_offset as usize;
         for _ in 0..self.screen_rows {
             self.move_cursor(ArrowKey::Up)
         }
     }
 
     fn page_down(&mut self) {
-        self.cursor_y = cmp::min(self.rows.len() as u16, self.row_offset + self.screen_rows - 1);
+        self.cursor.y = cmp::min(self.rows.len(), (self.row_offset + self.screen_rows - 1) as usize);
         for _ in 0..self.screen_rows {
             self.move_cursor(ArrowKey::Down)
         }

@@ -5,7 +5,7 @@ pub enum Direction {
 }
 
 pub struct SearchState {
-    pub last_match: Option<u16>,
+    pub last_match: Option<usize>,
     pub direction: Direction,
 }
 
