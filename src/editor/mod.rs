@@ -276,7 +276,15 @@ impl Editor {
                 }
             } else {
                 let ref mut row = self.rows[file_row].render;
-                let mut row = row.chars().skip(self.col_offset).collect::<String>();
+                let mut row = row.chars().skip(self.col_offset)
+                    .map(|c| {
+                        if c.is_digit(10) {
+                            format!("\x1b[31m{}\x1b[39m", c)
+                        } else {
+                            c.to_string()
+                        }
+                    })
+                    .collect::<String>();
                 util::safe_truncate(&mut row, self.screen_cols as usize);
                 self.write_buffer.push_str(&row);
             }
