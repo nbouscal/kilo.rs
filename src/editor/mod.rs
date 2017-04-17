@@ -164,6 +164,11 @@ impl Editor {
     }
 
     fn find_callback(&mut self, query: &str, key: Key) {
+        if !self.search_state.saved_highlight.is_empty() {
+            let cursor_y = self.search_state.last_match.unwrap();
+            self.rows[cursor_y].highlight = self.search_state.saved_highlight.clone();
+        }
+
         let mut current = self.search_state.last_match.unwrap_or(0);
 
         match key {
@@ -205,6 +210,7 @@ impl Editor {
                 self.cursor = cursor;
                 self.row_offset = self.rows.len();
 
+                self.search_state.saved_highlight = self.rows[cursor.y].highlight.clone();
                 for i in cursor.x..cursor.x + query.len() {
                     self.rows[cursor.y].highlight[i] = Highlight::Match;
                 }
