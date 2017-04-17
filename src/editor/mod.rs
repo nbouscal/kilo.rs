@@ -5,7 +5,7 @@ mod search_state;
 
 use self::cursor::Cursor;
 use self::key::{Key, ArrowKey};
-use self::row::Row;
+use self::row::{Row, Highlight};
 use self::search_state::{Direction, SearchState};
 use terminal;
 use util;
@@ -204,6 +204,10 @@ impl Editor {
                 self.search_state.last_match = Some(cursor.y);
                 self.cursor = cursor;
                 self.row_offset = self.rows.len();
+
+                for i in cursor.x..cursor.x + query.len() {
+                    self.rows[cursor.y].highlight[i] = Highlight::Match;
+                }
             },
             _ => (),
         }

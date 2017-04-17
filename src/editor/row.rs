@@ -14,6 +14,7 @@ pub struct Row {
 pub enum Highlight {
     Normal,
     Number,
+    Match,
 }
 
 impl Highlight {
@@ -21,6 +22,7 @@ impl Highlight {
         match *self {
             Highlight::Normal => 37,
             Highlight::Number => 31,
+            Highlight::Match  => 34,
         }
     }
 }
