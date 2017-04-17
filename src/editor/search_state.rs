@@ -1,3 +1,4 @@
+use editor::cursor::Cursor;
 use editor::row::Highlight;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -7,16 +8,19 @@ pub enum Direction {
 }
 
 pub struct SearchState {
-    pub last_match: Option<usize>,
-    pub saved_highlight: Vec<Highlight>,
+    pub last_match: Option<Match>,
     pub direction: Direction,
+}
+
+pub struct Match {
+    pub cursor: Cursor,
+    pub highlight: Vec<Highlight>,
 }
 
 impl SearchState {
     pub fn new() -> Self {
         SearchState {
             last_match: None,
-            saved_highlight: Vec::new(),
             direction: Direction::Forward,
         }
     }

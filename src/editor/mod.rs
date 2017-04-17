@@ -6,7 +6,7 @@ mod search_state;
 use self::cursor::Cursor;
 use self::key::{Key, ArrowKey};
 use self::row::{Row, Highlight};
-use self::search_state::{Direction, SearchState};
+use self::search_state::{Direction, Match, SearchState};
 use terminal;
 use util;
 
@@ -164,12 +164,13 @@ impl Editor {
     }
 
     fn find_callback(&mut self, query: &str, key: Key) {
-        if !self.search_state.saved_highlight.is_empty() {
-            let cursor_y = self.search_state.last_match.unwrap();
-            self.rows[cursor_y].highlight = self.search_state.saved_highlight.clone();
-        }
-
-        let mut current = self.search_state.last_match.unwrap_or(0);
+        let mut current = match self.search_state.last_match {
+            Some(Match { cursor, ref highlight }) => {
+                self.rows[cursor.y].highlight = highlight.clone();
+                cursor.y
+            },
+            None => 0,
+        };
 
         match key {
             Key::Control('M') | Key::Escape => return,
@@ -206,11 +207,13 @@ impl Editor {
         };
         match res {
             Some(cursor) => {
-                self.search_state.last_match = Some(cursor.y);
+                self.search_state.last_match = Some(Match {
+                    cursor: cursor,
+                    highlight: self.rows[cursor.y].highlight.clone()
+                });
                 self.cursor = cursor;
                 self.row_offset = self.rows.len();
 
-                self.search_state.saved_highlight = self.rows[cursor.y].highlight.clone();
                 for i in cursor.x..cursor.x + query.len() {
                     self.rows[cursor.y].highlight[i] = Highlight::Match;
                 }
