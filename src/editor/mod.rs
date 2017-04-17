@@ -275,18 +275,22 @@ impl Editor {
                     self.write_buffer.push_str("~");
                 }
             } else {
-                let ref mut row = self.rows[file_row].render;
-                let mut row = row.chars().skip(self.col_offset)
-                    .map(|c| {
-                        if c.is_digit(10) {
-                            format!("\x1b[31m{}\x1b[39m", c)
+                let ref row = self.rows[file_row];
+                let mut current_color = 0;
+                let render = row.render.char_indices()
+                    .skip(self.col_offset).take(self.screen_cols as usize)
+                    .map(|(i, c)| {
+                        let color = row.highlight[i].to_color();
+                        if color != current_color {
+                            current_color = color;
+                            format!("\x1b[{}m{}", color, c)
                         } else {
                             c.to_string()
                         }
                     })
                     .collect::<String>();
-                util::safe_truncate(&mut row, self.screen_cols as usize);
-                self.write_buffer.push_str(&row);
+                self.write_buffer.push_str(&render);
+                self.write_buffer.push_str("\x1b[39m");
             }
 
             self.write_buffer.push_str("\x1b[K");

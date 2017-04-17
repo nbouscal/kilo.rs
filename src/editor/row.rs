@@ -7,39 +7,73 @@ const KILO_TAB_STOP: usize = 8;
 pub struct Row {
     pub contents: String,
     pub render: String,
+    pub highlight: Vec<Highlight>,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub enum Highlight {
+    Normal,
+    Number,
+}
+
+impl Highlight {
+    pub fn to_color(&self) -> u8 {
+        match *self {
+            Highlight::Normal => 37,
+            Highlight::Number => 31,
+        }
+    }
 }
 
 impl Row {
     pub fn new() -> Self {
-        Row { contents: String::new(), render: String::new() }
+        Row {
+            contents: String::new(),
+            render: String::new(),
+            highlight: Vec::new(),
+        }
     }
 
     pub fn from_string(s: String) -> Self {
-        Row {
-            contents: s.clone(),
-            render: Self::render_string(s),
+        let mut row = Self::new();
+        row.append_string(&s);
+        row
+    }
+
+    fn update(&mut self) {
+        self.update_render();
+        self.update_syntax();
+    }
+
+    fn update_syntax(&mut self) {
+        self.highlight = iter::repeat(Highlight::Normal)
+            .take(self.render.chars().count()).collect();
+        for (i, c) in self.render.chars().enumerate() {
+            if c.is_digit(10) {
+                self.highlight[i] = Highlight::Number;
+            }
         }
     }
 
     pub fn insert_char(&mut self, at: usize, c: char) {
         self.contents.insert(at, c);
-        self.update_render();
+        self.update();
     }
 
     pub fn delete_char(&mut self, at: usize) {
         if at >= self.contents.len() { return }
         self.contents.remove(at);
-        self.update_render();
+        self.update();
     }
 
     pub fn append_string(&mut self, s: &str) {
         self.contents.push_str(s);
-        self.update_render();
+        self.update();
     }
 
     pub fn split_off(&mut self, at: usize) -> String {
         let remainder = util::safe_split_off(&mut self.contents, at);
-        self.update_render();
+        self.update();
         remainder
     }
 
