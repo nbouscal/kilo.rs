@@ -21,6 +21,11 @@ impl Syntax {
             filematch: vec![".c", ".h", ".cpp"],
             flags: [Flag::HighlightNumbers].iter().cloned().collect(),
         });
+        db.push(Syntax {
+            filetype: "rust",
+            filematch: vec![".rs"],
+            flags: [Flag::HighlightNumbers].iter().cloned().collect(),
+        });
         db
     }
 
