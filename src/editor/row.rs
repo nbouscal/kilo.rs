@@ -1,3 +1,4 @@
+use editor::syntax::{Flag, Flags, Syntax};
 use util;
 
 use std::iter;
@@ -8,6 +9,7 @@ pub struct Row {
     pub contents: String,
     pub render: String,
     pub highlight: Vec<Highlight>,
+    syntax_flags: Option<Flags>,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -39,6 +41,7 @@ impl Row {
             contents: String::new(),
             render: String::new(),
             highlight: Vec::new(),
+            syntax_flags: None,
         }
     }
 
@@ -46,6 +49,11 @@ impl Row {
         let mut row = Self::new();
         row.append_string(&s);
         row
+    }
+
+    pub fn set_syntax(&mut self, syntax: &Option<Syntax>) {
+        self.syntax_flags = syntax.as_ref().map(|s| &s.flags).cloned();
+        self.update_syntax();
     }
 
     fn update(&mut self) {
@@ -56,6 +64,9 @@ impl Row {
     fn update_syntax(&mut self) {
         self.highlight = iter::repeat(Highlight::Normal)
             .take(self.render.chars().count()).collect();
+
+        if self.syntax_flags.is_none() { return }
+
         let mut prev_sep = true;
         for (i, c) in self.render.chars().enumerate() {
             let prev_hl = if i > 0 {
@@ -63,11 +74,15 @@ impl Row {
             } else {
                 Highlight::Normal
             };
-            if (c.is_digit(10) && (prev_sep || prev_hl == Highlight::Number)) || (c == '.' && prev_hl == Highlight::Number) {
-                prev_sep = false;
-                self.highlight[i] = Highlight::Number;
-                continue;
+
+            if self.syntax_flags.as_ref().unwrap().contains(&Flag::HighlightNumbers) {
+                if (c.is_digit(10) && (prev_sep || prev_hl == Highlight::Number)) || (c == '.' && prev_hl == Highlight::Number) {
+                    prev_sep = false;
+                    self.highlight[i] = Highlight::Number;
+                    continue;
+                }
             }
+
             prev_sep = is_separator(c);
         }
     }

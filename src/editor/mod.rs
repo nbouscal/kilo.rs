@@ -2,11 +2,13 @@ mod cursor;
 mod key;
 mod row;
 mod search_state;
+mod syntax;
 
 use self::cursor::Cursor;
 use self::key::{Key, ArrowKey};
 use self::row::{Row, Highlight};
 use self::search_state::{Direction, Match, SearchState};
+use self::syntax::Syntax;
 use terminal;
 use util;
 
@@ -32,6 +34,7 @@ pub struct Editor {
     filename: String,
     status_msg: String,
     status_time: SystemTime,
+    syntax: Option<Syntax>,
     search_state: SearchState,
 }
 
@@ -52,13 +55,26 @@ impl Editor {
             filename: String::new(),
             status_msg: String::new(),
             status_time: SystemTime::now(),
+            syntax: None,
             search_state: SearchState::new(),
         }
     }
 
+    pub fn set_filename(&mut self, filename: String) {
+        self.set_syntax(Syntax::for_filename(&filename));
+        self.filename = filename;
+    }
+
+    pub fn set_syntax(&mut self, syntax: Option<Syntax>) {
+        self.syntax = syntax;
+        for row in self.rows.iter_mut() { row.set_syntax(&self.syntax) }
+    }
+
     pub fn insert_char(&mut self, c: char) {
         if self.cursor_past_end() {
-            self.rows.push(Row::new());
+            let mut row = Row::new();
+            row.set_syntax(&self.syntax);
+            self.rows.push(row);
         }
         let cursor_x = self.cursor.x;
         {
@@ -105,7 +121,9 @@ impl Editor {
 
     fn insert_row(&mut self, at: usize, s: String) {
         if at <= self.rows.len() {
-            self.rows.insert(at, Row::from_string(s));
+            let mut row = Row::from_string(s);
+            row.set_syntax(&self.syntax);
+            self.rows.insert(at, row);
         };
     }
 
@@ -122,19 +140,21 @@ impl Editor {
     }
 
     pub fn open_file(&mut self, filename: &str) {
-        self.filename = filename.to_string();
         let f = File::open(filename).unwrap(); // TODO: Handle error
         let reader = BufReader::new(f);
         self.rows = reader.lines()
             .map(|line| line.unwrap_or(String::new()))
             .map(Row::from_string).collect();
+        self.set_filename(filename.to_string());
         self.dirty = false;
     }
 
     pub fn save_file(&mut self) {
         if self.filename.is_empty() {
             match self.prompt(&|buf| format!("Save as: {}", buf), &|_, _, _|()) {
-                Some(name) => self.filename = name,
+                Some(name) => {
+                    self.set_filename(name);
+                },
                 None => {
                     self.set_status_message("Save aborted");
                     return;
@@ -322,7 +342,11 @@ impl Editor {
         }
         let modified = if self.dirty { "(modified)" } else { "" };
         let mut status = format!("{} - {} lines {}", filename, self.rows.len(), modified);
-        let rstatus = format!("{}/{}", self.cursor.y + 1, self.rows.len());
+        let syntax = match self.syntax {
+            Some(ref s) => s.filetype,
+            None => "no ft",
+        };
+        let rstatus = format!("{} | {}/{}", syntax, self.cursor.y + 1, self.rows.len());
         if self.screen_cols as usize > status.len() + rstatus.len() {
             let padding = self.screen_cols as usize - status.len() - rstatus.len();
             status.push_str(&" ".repeat(padding));
