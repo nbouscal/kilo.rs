@@ -27,6 +27,12 @@ impl Highlight {
     }
 }
 
+fn is_separator(c: char) -> bool {
+    c.is_whitespace() ||
+        c == '\0' ||
+        ",.()+-/*=~%<>[];".contains(c)
+}
+
 impl Row {
     pub fn new() -> Self {
         Row {
@@ -50,10 +56,19 @@ impl Row {
     fn update_syntax(&mut self) {
         self.highlight = iter::repeat(Highlight::Normal)
             .take(self.render.chars().count()).collect();
+        let mut prev_sep = true;
         for (i, c) in self.render.chars().enumerate() {
-            if c.is_digit(10) {
+            let prev_hl = if i > 0 {
+                self.highlight[i - 1]
+            } else {
+                Highlight::Normal
+            };
+            if (c.is_digit(10) && (prev_sep || prev_hl == Highlight::Number)) || (c == '.' && prev_hl == Highlight::Number) {
+                prev_sep = false;
                 self.highlight[i] = Highlight::Number;
+                continue;
             }
+            prev_sep = is_separator(c);
         }
     }
 
