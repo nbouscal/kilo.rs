@@ -3,6 +3,7 @@ use std::collections::HashSet;
 #[derive(PartialEq, Eq, Clone, Hash)]
 pub enum Flag {
     HighlightNumbers,
+    HighlightStrings,
 }
 
 pub type Flags = HashSet<Flag>;
@@ -19,12 +20,18 @@ impl Syntax {
         db.push(Syntax {
             filetype: "c",
             filematch: vec![".c", ".h", ".cpp"],
-            flags: [Flag::HighlightNumbers].iter().cloned().collect(),
+            flags: [
+                Flag::HighlightNumbers,
+                Flag::HighlightStrings,
+            ].iter().cloned().collect(),
         });
         db.push(Syntax {
             filetype: "rust",
             filematch: vec![".rs"],
-            flags: [Flag::HighlightNumbers].iter().cloned().collect(),
+            flags: [
+                Flag::HighlightNumbers,
+                Flag::HighlightStrings,
+            ].iter().cloned().collect(),
         });
         db
     }

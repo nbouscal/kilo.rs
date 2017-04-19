@@ -15,6 +15,7 @@ pub struct Row {
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Highlight {
     Normal,
+    String,
     Number,
     Match,
 }
@@ -23,8 +24,31 @@ impl Highlight {
     pub fn to_color(&self) -> u8 {
         match *self {
             Highlight::Normal => 37,
+            Highlight::String => 35,
             Highlight::Number => 31,
             Highlight::Match  => 34,
+        }
+    }
+}
+
+enum InString {
+    SingleQuoted,
+    DoubleQuoted,
+}
+
+impl InString {
+    fn to_char(&self) -> char {
+        match self {
+            &InString::SingleQuoted => '\'',
+            &InString::DoubleQuoted => '"',
+        }
+    }
+
+    fn from_char(c: char) -> Option<Self> {
+        match c {
+            '\'' => Some(InString::SingleQuoted),
+            '"' => Some(InString::DoubleQuoted),
+            _ => None,
         }
     }
 }
@@ -68,12 +92,46 @@ impl Row {
         if self.syntax_flags.is_none() { return }
 
         let mut prev_sep = true;
-        for (i, c) in self.render.chars().enumerate() {
+        let mut in_string = None;
+
+        let mut iter = self.render.chars().enumerate();
+
+        while let Some((i, c)) = iter.next() {
             let prev_hl = if i > 0 {
                 self.highlight[i - 1]
             } else {
                 Highlight::Normal
             };
+
+            if self.syntax_flags.as_ref().unwrap().contains(&Flag::HighlightStrings) {
+                match in_string.as_ref().map(|is: &InString| is.to_char()) {
+                    None => {
+                        let is = InString::from_char(c);
+                        if is.is_some() {
+                            in_string = is;
+                            self.highlight[i] = Highlight::String;
+                            continue;
+                        }
+                    },
+                    Some(quote) => {
+                        self.highlight[i] = Highlight::String;
+
+                        if c == '\\' {
+                            match iter.next() {
+                                Some((j, _)) => {
+                                    self.highlight[j] = Highlight::String;
+                                    continue;
+                                },
+                                None => (),
+                            }
+                        }
+
+                        if c == quote { in_string = None }
+                        prev_sep = true;
+                        continue;
+                    },
+                }
+            }
 
             if self.syntax_flags.as_ref().unwrap().contains(&Flag::HighlightNumbers) {
                 if (c.is_digit(10) && (prev_sep || prev_hl == Highlight::Number)) || (c == '.' && prev_hl == Highlight::Number) {
