@@ -14,6 +14,8 @@ pub struct Syntax {
     pub filematch: Vec<&'static str>,
     pub keywords: Vec<Keyword>,
     pub singleline_comment_start: &'static str,
+    pub multiline_comment_start: &'static str,
+    pub multiline_comment_end: &'static str,
     pub flags: Flags,
 }
 
@@ -50,6 +52,8 @@ impl Syntax {
                 Keyword::Two("signed"), Keyword::Two("void"),
             ],
             singleline_comment_start: "//",
+            multiline_comment_start: "/*",
+            multiline_comment_end: "*/",
             flags: [
                 Flag::HighlightNumbers,
                 Flag::HighlightStrings,
@@ -74,6 +78,8 @@ impl Syntax {
                 Keyword::Two("i8"), Keyword::Two("i16"), Keyword::Two("i32"),
             ],
             singleline_comment_start: "//",
+            multiline_comment_start: "/*",
+            multiline_comment_end: "*/",
             flags: [
                 Flag::HighlightNumbers,
                 Flag::HighlightStrings,

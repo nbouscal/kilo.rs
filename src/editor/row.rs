@@ -17,6 +17,7 @@ pub struct Row {
 pub enum Highlight {
     Normal,
     Comment,
+    MLComment,
     Keyword1,
     Keyword2,
     String,
@@ -28,7 +29,7 @@ impl Highlight {
     pub fn to_color(&self) -> u8 {
         match *self {
             Highlight::Normal => 37,
-            Highlight::Comment => 36,
+            Highlight::Comment | Highlight::MLComment => 36,
             Highlight::Keyword1 => 33,
             Highlight::Keyword2 => 32,
             Highlight::String => 35,
@@ -107,9 +108,12 @@ impl Row {
         let syntax = self.syntax.as_ref().unwrap();
 
         let scs = syntax.singleline_comment_start;
+        let mcs = syntax.multiline_comment_start;
+        let mce = syntax.multiline_comment_end;
 
         let mut prev_sep = true;
         let mut in_string = None;
+        let mut in_mlcomment = false;
 
         let mut iter = self.render.chars().enumerate();
 
@@ -120,12 +124,37 @@ impl Row {
                 Highlight::Normal
             };
 
-            if in_string.is_none() && !scs.is_empty() {
-                if self.render.chars().skip(i).collect::<String>().starts_with(scs) {
+            let remaining_chars = self.render.chars().skip(i).collect::<String>();
+
+            if in_string.is_none() && !scs.is_empty() && !in_mlcomment {
+                if remaining_chars.starts_with(scs) {
                     for j in i..self.highlight.len() {
                         self.highlight[j] = Highlight::Comment;
                     }
                     break;
+                }
+            }
+
+            if in_string.is_none() && !mcs.is_empty() && !mce.is_empty() {
+                if in_mlcomment {
+                    self.highlight[i] = Highlight::MLComment;
+                    if remaining_chars.starts_with(mce) {
+                        for j in 1..mce.len() {
+                            self.highlight[i + j] = Highlight::MLComment;
+                            iter.next();
+                        }
+                        in_mlcomment = false;
+                        prev_sep = true;
+                    }
+                    continue;
+                } else if remaining_chars.starts_with(mcs) {
+                    self.highlight[i] = Highlight::MLComment;
+                    for j in 1..mcs.len() {
+                        self.highlight[i + j] = Highlight::MLComment;
+                        iter.next();
+                    }
+                    in_mlcomment = true;
+                    continue;
                 }
             }
 
