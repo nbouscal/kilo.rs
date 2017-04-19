@@ -1,4 +1,4 @@
-use editor::syntax::{Flag, Syntax};
+use editor::syntax::{Flag, Keyword, Syntax};
 use util;
 
 use std::iter;
@@ -17,6 +17,8 @@ pub struct Row {
 pub enum Highlight {
     Normal,
     Comment,
+    Keyword1,
+    Keyword2,
     String,
     Number,
     Match,
@@ -27,9 +29,18 @@ impl Highlight {
         match *self {
             Highlight::Normal => 37,
             Highlight::Comment => 36,
+            Highlight::Keyword1 => 33,
+            Highlight::Keyword2 => 32,
             Highlight::String => 35,
             Highlight::Number => 31,
             Highlight::Match  => 34,
+        }
+    }
+
+    pub fn from_keyword(kw: &Keyword) -> Self {
+        match kw {
+            &Keyword::One(_) => Highlight::Keyword1,
+            &Keyword::Two(_) => Highlight::Keyword2,
         }
     }
 }
@@ -154,6 +165,28 @@ impl Row {
                     self.highlight[i] = Highlight::Number;
                     continue;
                 }
+            }
+
+            if prev_sep {
+                for kw in syntax.keywords.iter() {
+                    let s = kw.as_str();
+                    let matched = self.render.match_indices(s)
+                        .map(|pair| pair.0)
+                        .collect::<Vec<usize>>()
+                        .contains(&i);
+                    if !matched { continue }
+                    let chars = self.render.chars().collect::<Vec<char>>();
+                    let separated = i + s.len() == self.render.len() ||
+                        is_separator(chars[i + s.len()]);
+                    if !separated { continue }
+                    let hl = Highlight::from_keyword(kw);
+                    self.highlight[i] = hl;
+                    for j in 1..s.len() {
+                        self.highlight[i + j] = hl;
+                        iter.next();
+                    }
+                    break;
+                };
             }
 
             prev_sep = is_separator(c);
