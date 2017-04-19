@@ -8,9 +8,11 @@ pub enum Flag {
 
 pub type Flags = HashSet<Flag>;
 
+#[derive(Clone)]
 pub struct Syntax {
     pub filetype: &'static str,
     pub filematch: Vec<&'static str>,
+    pub singleline_comment_start: &'static str,
     pub flags: Flags,
 }
 
@@ -20,6 +22,7 @@ impl Syntax {
         db.push(Syntax {
             filetype: "c",
             filematch: vec![".c", ".h", ".cpp"],
+            singleline_comment_start: "//",
             flags: [
                 Flag::HighlightNumbers,
                 Flag::HighlightStrings,
@@ -28,6 +31,7 @@ impl Syntax {
         db.push(Syntax {
             filetype: "rust",
             filematch: vec![".rs"],
+            singleline_comment_start: "//",
             flags: [
                 Flag::HighlightNumbers,
                 Flag::HighlightStrings,

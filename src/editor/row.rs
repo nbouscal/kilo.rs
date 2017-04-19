@@ -1,7 +1,8 @@
-use editor::syntax::{Flag, Flags, Syntax};
+use editor::syntax::{Flag, Syntax};
 use util;
 
 use std::iter;
+use std::rc::Rc;
 
 const KILO_TAB_STOP: usize = 8;
 
@@ -9,12 +10,13 @@ pub struct Row {
     pub contents: String,
     pub render: String,
     pub highlight: Vec<Highlight>,
-    syntax_flags: Option<Flags>,
+    syntax: Option<Rc<Syntax>>,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Highlight {
     Normal,
+    Comment,
     String,
     Number,
     Match,
@@ -24,6 +26,7 @@ impl Highlight {
     pub fn to_color(&self) -> u8 {
         match *self {
             Highlight::Normal => 37,
+            Highlight::Comment => 36,
             Highlight::String => 35,
             Highlight::Number => 31,
             Highlight::Match  => 34,
@@ -65,7 +68,7 @@ impl Row {
             contents: String::new(),
             render: String::new(),
             highlight: Vec::new(),
-            syntax_flags: None,
+            syntax: None,
         }
     }
 
@@ -75,8 +78,8 @@ impl Row {
         row
     }
 
-    pub fn set_syntax(&mut self, syntax: &Option<Syntax>) {
-        self.syntax_flags = syntax.as_ref().map(|s| &s.flags).cloned();
+    pub fn set_syntax(&mut self, syntax: Option<Rc<Syntax>>) {
+        self.syntax = syntax;
         self.update_syntax();
     }
 
@@ -89,7 +92,10 @@ impl Row {
         self.highlight = iter::repeat(Highlight::Normal)
             .take(self.render.chars().count()).collect();
 
-        if self.syntax_flags.is_none() { return }
+        if self.syntax.is_none() { return }
+        let syntax = self.syntax.as_ref().unwrap();
+
+        let scs = syntax.singleline_comment_start;
 
         let mut prev_sep = true;
         let mut in_string = None;
@@ -103,7 +109,16 @@ impl Row {
                 Highlight::Normal
             };
 
-            if self.syntax_flags.as_ref().unwrap().contains(&Flag::HighlightStrings) {
+            if in_string.is_none() && !scs.is_empty() {
+                if self.render.chars().skip(i).collect::<String>().starts_with(scs) {
+                    for j in i..self.highlight.len() {
+                        self.highlight[j] = Highlight::Comment;
+                    }
+                    break;
+                }
+            }
+
+            if syntax.flags.contains(&Flag::HighlightStrings) {
                 match in_string.as_ref().map(|is: &InString| is.to_char()) {
                     None => {
                         let is = InString::from_char(c);
@@ -133,7 +148,7 @@ impl Row {
                 }
             }
 
-            if self.syntax_flags.as_ref().unwrap().contains(&Flag::HighlightNumbers) {
+            if syntax.flags.contains(&Flag::HighlightNumbers) {
                 if (c.is_digit(10) && (prev_sep || prev_hl == Highlight::Number)) || (c == '.' && prev_hl == Highlight::Number) {
                     prev_sep = false;
                     self.highlight[i] = Highlight::Number;

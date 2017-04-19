@@ -16,6 +16,7 @@ use std::cmp;
 use std::io::{self, Read, BufRead, BufReader, Write};
 use std::fs::File;
 use std::process;
+use std::rc::Rc;
 use std::time::{Duration, SystemTime};
 
 const KILO_VERSION: &'static str = "0.0.1";
@@ -34,7 +35,7 @@ pub struct Editor {
     filename: String,
     status_msg: String,
     status_time: SystemTime,
-    syntax: Option<Syntax>,
+    syntax: Option<Rc<Syntax>>,
     search_state: SearchState,
 }
 
@@ -66,14 +67,14 @@ impl Editor {
     }
 
     pub fn set_syntax(&mut self, syntax: Option<Syntax>) {
-        self.syntax = syntax;
-        for row in self.rows.iter_mut() { row.set_syntax(&self.syntax) }
+        self.syntax = syntax.map(Rc::new);
+        for row in self.rows.iter_mut() { row.set_syntax(self.syntax.clone()) }
     }
 
     pub fn insert_char(&mut self, c: char) {
         if self.cursor_past_end() {
             let mut row = Row::new();
-            row.set_syntax(&self.syntax);
+            row.set_syntax(self.syntax.clone());
             self.rows.push(row);
         }
         let cursor_x = self.cursor.x;
@@ -122,7 +123,7 @@ impl Editor {
     fn insert_row(&mut self, at: usize, s: String) {
         if at <= self.rows.len() {
             let mut row = Row::from_string(s);
-            row.set_syntax(&self.syntax);
+            row.set_syntax(self.syntax.clone());
             self.rows.insert(at, row);
         };
     }
