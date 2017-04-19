@@ -71,6 +71,17 @@ impl Editor {
         for row in self.rows.iter_mut() { row.set_syntax(self.syntax.clone()) }
     }
 
+    pub fn check_mlcomments(&mut self) {
+        let mut in_mlcomment = false;
+        for row in self.rows.iter_mut() {
+            let old_open_comment = row.open_comment;
+            row.open_comment = in_mlcomment;
+            if row.ends_mlcomment()   { in_mlcomment = false }
+            if row.starts_mlcomment() { in_mlcomment = true  }
+            if row.open_comment != old_open_comment { row.update_syntax() }
+        }
+    }
+
     pub fn insert_char(&mut self, c: char) {
         if self.cursor_past_end() {
             let mut row = Row::new();
@@ -84,6 +95,7 @@ impl Editor {
         }
         self.cursor.x += 1;
         self.dirty = true;
+        self.check_mlcomments();
     }
 
     pub fn insert_newline(&mut self) {
@@ -99,6 +111,7 @@ impl Editor {
         self.cursor.y += 1;
         self.cursor.x = 0;
         self.dirty = true;
+        self.check_mlcomments();
     }
 
     pub fn delete_char(&mut self) {
@@ -118,6 +131,7 @@ impl Editor {
             self.cursor.x -= 1;
         }
         self.dirty = true;
+        self.check_mlcomments();
     }
 
     fn insert_row(&mut self, at: usize, s: String) {
@@ -148,6 +162,8 @@ impl Editor {
             .map(Row::from_string).collect();
         self.set_filename(filename.to_string());
         self.dirty = false;
+        self.check_mlcomments();
+        for row in self.rows.iter_mut() { row.update_syntax() }
     }
 
     pub fn save_file(&mut self) {

@@ -11,6 +11,7 @@ pub struct Row {
     pub render: String,
     pub highlight: Vec<Highlight>,
     syntax: Option<Rc<Syntax>>,
+    pub open_comment: bool,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -81,6 +82,7 @@ impl Row {
             render: String::new(),
             highlight: Vec::new(),
             syntax: None,
+            open_comment: false,
         }
     }
 
@@ -100,7 +102,33 @@ impl Row {
         self.update_syntax();
     }
 
-    fn update_syntax(&mut self) {
+    pub fn starts_mlcomment(&self) -> bool {
+        match self.highlight.last() {
+            None => false,
+            Some(hl) => {
+                if hl != &Highlight::MLComment { return false }
+                let mce = self.syntax.as_ref().unwrap().multiline_comment_end;
+                if self.render.ends_with(mce) { return false }
+                let mcs = self.syntax.as_ref().unwrap().multiline_comment_start;
+                self.highlight[0] != Highlight::MLComment ||
+                    self.render.starts_with(mcs)
+            },
+        }
+    }
+
+    pub fn ends_mlcomment(&self) -> bool {
+        match self.highlight.last() {
+            None => false,
+            Some(hl) => {
+                if self.highlight[0] != Highlight::MLComment { return false }
+                let mce = self.syntax.as_ref().unwrap().multiline_comment_end;
+                hl != &Highlight::MLComment ||
+                    self.render.ends_with(mce)
+            },
+        }
+    }
+
+    pub fn update_syntax(&mut self) {
         self.highlight = iter::repeat(Highlight::Normal)
             .take(self.render.chars().count()).collect();
 
@@ -113,7 +141,7 @@ impl Row {
 
         let mut prev_sep = true;
         let mut in_string = None;
-        let mut in_mlcomment = false;
+        let mut in_mlcomment = self.open_comment;
 
         let mut iter = self.render.chars().enumerate();
 
