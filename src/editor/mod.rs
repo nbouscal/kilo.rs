@@ -314,12 +314,26 @@ impl Editor {
                 let render = row.render.char_indices()
                     .skip(self.col_offset).take(self.screen_cols as usize)
                     .map(|(i, c)| {
-                        let color = row.highlight[i].to_color();
-                        if color != current_color {
-                            current_color = color;
-                            format!("\x1b[{}m{}", color, c)
+                        if c.is_control() {
+                            let sym = if c as u8 <= 26 {
+                                ('@' as u8 + c as u8) as char
+                            } else {
+                                '?'
+                            };
+                            let reset = if current_color > 0 {
+                                format!("\x1b[{}m", current_color)
+                            } else {
+                                String::new()
+                            };
+                            format!("\x1b[7m{}\x1b[m{}", sym, reset)
                         } else {
-                            c.to_string()
+                            let color = row.highlight[i].to_color();
+                            if color != current_color {
+                                current_color = color;
+                                format!("\x1b[{}m{}", color, c)
+                            } else {
+                                c.to_string()
+                            }
                         }
                     })
                     .collect::<String>();
