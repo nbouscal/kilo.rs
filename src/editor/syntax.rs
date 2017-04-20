@@ -19,7 +19,7 @@ pub struct Syntax {
     pub flags: Flags,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum Keyword {
     One(&'static str),
     Two(&'static str),

@@ -145,6 +145,13 @@ impl Row {
 
         let mut iter = self.render.chars().enumerate();
 
+        let render = self.render.clone();
+        let keyword_matches = syntax.keywords.iter().flat_map(|&kw| {
+            render.match_indices(kw.as_str())
+                .map(|pair| pair.0)
+                .zip(iter::repeat(kw))
+        }).collect::<Vec<(usize, Keyword)>>();
+
         while let Some((i, c)) = iter.next() {
             let prev_hl = if i > 0 {
                 self.highlight[i - 1]
@@ -225,24 +232,22 @@ impl Row {
             }
 
             if prev_sep {
-                for kw in syntax.keywords.iter() {
-                    let s = kw.as_str();
-                    let matched = self.render.match_indices(s)
-                        .map(|pair| pair.0)
-                        .collect::<Vec<usize>>()
-                        .contains(&i);
-                    if !matched { continue }
-                    let chars = self.render.chars().collect::<Vec<char>>();
-                    let separated = i + s.len() == self.render.len() ||
-                        is_separator(chars[i + s.len()]);
-                    if !separated { continue }
-                    let hl = Highlight::from_keyword(kw);
-                    self.highlight[i] = hl;
-                    for j in 1..s.len() {
-                        self.highlight[i + j] = hl;
-                        iter.next();
-                    }
-                    break;
+                match keyword_matches.iter().find(|&&(j, _)| { i == j }) {
+                    None => (),
+                    Some(&(_, kw)) => {
+                        let s = kw.as_str();
+                        let chars = self.render.chars().collect::<Vec<char>>();
+                        let separated = i + s.len() == self.render.len() ||
+                            is_separator(chars[i + s.len()]);
+                        if !separated { continue }
+                        let hl = Highlight::from_keyword(&kw);
+                        self.highlight[i] = hl;
+                        for j in 1..s.len() {
+                            self.highlight[i + j] = hl;
+                            iter.next();
+                        }
+                        continue;
+                    },
                 };
             }
 
