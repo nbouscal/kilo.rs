@@ -405,11 +405,15 @@ impl Editor {
     }
 
     fn read_key() -> Option<Key> {
-        // FIXME: This is the likely source of a bug where if you spam
-        //        arrow keys fast enough, it inserts [ characters
-        let mut bytes = [0; 4];
-        let _ = io::stdin().read(&mut bytes);
-        Key::from_bytes(&bytes)
+        let stdin = io::stdin();
+        let c = stdin.lock().bytes().next().and_then(|res| res.ok());
+        if c.is_none() { return None }
+        if c != Some(b'\x1b') { return Key::from_byte(c.unwrap()) }
+        let mut seq: Vec<u8> = stdin.lock().bytes().take(2).map(|res| res.ok().unwrap()).collect();
+        if seq[0] == b'[' && seq[1] >= b'0' && seq[1] <= b'9' {
+            seq.push(stdin.lock().bytes().next().and_then(|res| res.ok()).unwrap());
+        }
+        Some(Key::from_escape_sequence(&seq))
     }
 
     fn cursor_past_end(&self) -> bool {

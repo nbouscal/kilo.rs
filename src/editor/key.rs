@@ -19,22 +19,22 @@ pub enum ArrowKey {
 }
 
 impl Key {
-    pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        match bytes[0] {
+    pub fn from_byte(byte: u8) -> Option<Self> {
+        match byte {
             0       => None,
-            b'\x1b' => Some(Self::from_escape_sequence(&bytes[1..])),
+            b'\x1b' => Some(Key::Escape),
             8 | 127 => Some(Key::Backspace),
-            1...31  => Some(Key::Control((bytes[0] | 0x40) as char)),
-            _       => Some(Key::Character(bytes[0] as char))
+            1...31  => Some(Key::Control((byte | 0x40) as char)),
+            _       => Some(Key::Character(byte as char))
         }
     }
 
-    fn from_escape_sequence(bytes: &[u8]) -> Self {
+    pub fn from_escape_sequence(bytes: &[u8]) -> Self {
         match bytes {
-            b"[A\0" => Key::Arrow(ArrowKey::Up),
-            b"[B\0" => Key::Arrow(ArrowKey::Down),
-            b"[C\0" => Key::Arrow(ArrowKey::Right),
-            b"[D\0" => Key::Arrow(ArrowKey::Left),
+            b"[A" => Key::Arrow(ArrowKey::Up),
+            b"[B" => Key::Arrow(ArrowKey::Down),
+            b"[C" => Key::Arrow(ArrowKey::Right),
+            b"[D" => Key::Arrow(ArrowKey::Left),
             b"[3~"  => Key::Delete,
             b"[1~" | b"[7~" | b"[H" | b"OH" => Key::Home,
             b"[4~" | b"[8~" | b"[F" | b"OF" => Key::End,
