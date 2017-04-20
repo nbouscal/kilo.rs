@@ -142,6 +142,8 @@ impl Row {
         let mut prev_sep = true;
         let mut in_string = None;
         let mut in_mlcomment = self.open_comment;
+        let opens_comment = (!scs.is_empty() && self.render.contains(scs)) ||
+            (!mcs.is_empty() && self.render.contains(mcs));
 
         let mut iter = self.render.chars().enumerate();
 
@@ -159,10 +161,8 @@ impl Row {
                 Highlight::Normal
             };
 
-            let remaining_chars = self.render.chars().skip(i).collect::<String>();
-
-            if in_string.is_none() && !scs.is_empty() && !in_mlcomment {
-                if remaining_chars.starts_with(scs) {
+            if in_string.is_none() && !in_mlcomment && opens_comment {
+                if self.render.chars().skip(i).collect::<String>().starts_with(scs) {
                     for j in i..self.highlight.len() {
                         self.highlight[j] = Highlight::Comment;
                     }
@@ -172,24 +172,33 @@ impl Row {
 
             if in_string.is_none() && !mcs.is_empty() && !mce.is_empty() {
                 if in_mlcomment {
-                    self.highlight[i] = Highlight::MLComment;
-                    if remaining_chars.starts_with(mce) {
-                        for j in 1..mce.len() {
+                    match self.render.chars().skip(i).collect::<String>().find(mce) {
+                        Some(j) => {
+                            self.highlight[i] = Highlight::MLComment;
+                            for k in 1..j + mce.len() {
+                                self.highlight[i + k] = Highlight::MLComment;
+                                iter.next();
+                            }
+                            in_mlcomment = false;
+                            continue;
+                        }
+                        None => {
+                            for j in i..self.highlight.len() {
+                                self.highlight[j] = Highlight::MLComment;
+                            }
+                            break;
+                        },
+                    }
+                } else if opens_comment {
+                    if self.render.chars().skip(i).collect::<String>().starts_with(mcs) {
+                        self.highlight[i] = Highlight::MLComment;
+                        for j in 1..mcs.len() {
                             self.highlight[i + j] = Highlight::MLComment;
                             iter.next();
                         }
-                        in_mlcomment = false;
-                        prev_sep = true;
+                        in_mlcomment = true;
+                        continue;
                     }
-                    continue;
-                } else if remaining_chars.starts_with(mcs) {
-                    self.highlight[i] = Highlight::MLComment;
-                    for j in 1..mcs.len() {
-                        self.highlight[i + j] = Highlight::MLComment;
-                        iter.next();
-                    }
-                    in_mlcomment = true;
-                    continue;
                 }
             }
 
